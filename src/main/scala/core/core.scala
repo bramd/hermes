@@ -260,7 +260,7 @@ trait Perspective extends Position {
     val candidates = nearestPath.map { np =>
       Log.d("hermescheck", "Paths: "+nearestIntersectionCandidates.map(_.paths))
       nearestIntersectionCandidates.filter(_.paths.contains(np))
-    }.getOrElse(nearestIntersectionCandidates)
+    }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
     candidates.find { c =>
       c.distanceTo(this) <= distance
     }
