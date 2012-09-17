@@ -1,0 +1,12 @@
+<resources>
+
+  <string name="app_name">Hermes</string>
+
+  <string name="accuracy">Accuracy</string>
+  <string name="nearestPath">On %1$s</string>
+
+  <string name="exit">Exit</string>
+
+  <string name="mapLoaded">Map loaded</string>
+
+</resources>
