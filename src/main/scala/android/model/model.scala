@@ -33,39 +33,39 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 }
 
-class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
+class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
   lazy val segments = {
     var rv = List[Segment]()
-    db.exec(
+    db.map(_.exec(
       "select name, node_from, node_to from roads where node_from = "+id+" or node_to = "+id,
       { outer:Map[String, String] =>
         val name = outer("name")
         val fromID = outer("node_from").toInt
         val toID = outer("node_to").toInt
         val where = "node_id = "+(if(fromID == id) toID else fromID)
-        db.exec(
+        db.map(_.exec(
           "select X(geometry) as lon, Y(geometry) as lat from roads_nodes where "+where+" limit 1",
           { inner:Map[String, String] =>
             rv ::= Segment(name, this, Point(inner("lat").toDouble, inner("lon").toDouble))
             false
           }
-        )
+        ))
         false
       }
-    )
+    ))
     rv
   }
 
 }
 
-class AndroidPerspective(db:Database, val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
+class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
   val nearestPoints = Nil
 
   lazy val nearestIntersectionCandidates = {
     var rv = List[IntersectionPosition]()
-    db.exec(
+    db.map(_.exec(
       """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
       X(geometry) as lon,
       Y(geometry) as lat, rowid as id
@@ -80,7 +80,7 @@ class AndroidPerspective(db:Database, val lat:Double, val lon:Double, val direct
         rv ::= new AndroidIntersectionPosition(db, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
         false
       }
-    )
+    ))
     rv
   }
 
@@ -90,7 +90,7 @@ class AndroidPerspective(db:Database, val lat:Double, val lon:Double, val direct
     .headOption.flatMap(v => previous.get.nearestPath)
     .orElse {
       var rv:Option[String] = None
-      db.exec(
+      db.map(_.exec(
         """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name
         from ln_highway
         where ln_highway.rowid in (
@@ -103,7 +103,7 @@ class AndroidPerspective(db:Database, val lat:Double, val lon:Double, val direct
           rv = row.get("name")
           false
         }
-      )
+      ))
       rv
     }
   }

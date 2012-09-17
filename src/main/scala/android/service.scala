@@ -245,7 +245,7 @@ class HermesService extends Service {
         return
       processing = true
       database.map { db =>
-        val p = new AndroidPerspective(db, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+        val p = new AndroidPerspective(List(db), loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
         val np = p.nearestPath
         if(np != lastNearestPath)
           nearestPathChanged(np)
