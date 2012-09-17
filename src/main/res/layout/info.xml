@@ -9,11 +9,16 @@
     android:id="@+id/nearestPath"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:focusable="true"
-    android:layout_weight="1"/>
+    android:focusable="true"/>
 
   <TextView
     android:id="@+id/nearestIntersection"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:focusable="true"/>
+
+  <ListView
+    android:id="@+id/points"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:focusable="true"
