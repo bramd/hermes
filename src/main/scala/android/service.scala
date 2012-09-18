@@ -197,6 +197,7 @@ class HermesService extends Service {
       pingedIntersections.get(i).getOrElse {
         sendMessage(i.name)
       }
+      pingedIntersections += (i -> System.currentTimeMillis)
     }
   }
 
