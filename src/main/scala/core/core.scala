@@ -3,6 +3,23 @@ package core
 
 import _root_.android.util.Log
 
+abstract class RelativeDirection(val description:String) {
+  override val toString = description
+}
+
+case object Ahead extends RelativeDirection("ahead")
+case object AheadAndLeft extends RelativeDirection("ahead and left")
+case object LeftAndAhead extends RelativeDirection("left and ahead")
+case object Left extends RelativeDirection("left")
+case object LeftAndBehind extends RelativeDirection("left and behind")
+case object BehindAndLeft extends RelativeDirection("behind and left")
+case object Behind extends RelativeDirection("behind")
+case object BehindAndRight extends RelativeDirection("behind and right")
+case object RightAndBehind extends RelativeDirection("right and behind")
+case object Right extends RelativeDirection("right")
+case object RightAndAhead extends RelativeDirection("right and ahead")
+case object AheadAndRight extends RelativeDirection("ahead and right")
+
 case class Direction(val degrees:Double, relative:Boolean = false) {
 
   lazy val heading = normalize(degrees)
@@ -46,23 +63,23 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
       "north"
   }
 
-  def toRelativeString = {
-    if(heading < 15) "ahead"
-    else if(heading < 45) "ahead and right"
-    else if(heading < 75) "right and ahead"
-    else if(heading < 105) "right"
-    else if(heading < 135) "right and behind"
-    else if(heading < 165) "behind and right"
-    else if(heading < 195) "behind"
-    else if(heading < 225) "behind and left"
-    else if(heading < 255) "left and behind"
-    else if(heading < 285) "left"
-    else if(heading < 315) "left and ahead"
-    else if(heading < 345) "ahead and left"
-    else "ahead"
+  def toRelative = {
+    if(heading < 15) Ahead
+    else if(heading < 45) AheadAndRight
+    else if(heading < 75) RightAndAhead
+    else if(heading < 105) Right
+    else if(heading < 135) RightAndBehind
+    else if(heading < 165) BehindAndRight
+    else if(heading < 195) Behind
+    else if(heading < 225) BehindAndLeft
+    else if(heading < 255) LeftAndBehind
+    else if(heading < 285) Left
+    else if(heading < 315) LeftAndAhead
+    else if(heading < 345) AheadAndLeft
+    else Ahead
   }
 
-  override def toString = if(relative) toRelativeString else toCardinalString
+  override def toString = if(relative) toRelative.toString else toCardinalString
 
   def toRoughRelativeString = {
     if(heading <= 30 || heading >= 330)
