@@ -223,6 +223,8 @@ class HermesService extends Service {
 
     private var processing = false
 
+    private var unprocessedLocation:Option[Location] = None
+
     def onLocationChanged(loc:Location) {
       val dir = Option(loc.getBearing).map(Direction(_))
       if(dir != lastDirection)
@@ -242,8 +244,10 @@ class HermesService extends Service {
       if(p != lastProvider)
         providerChanged(p)
       lastProvider = p
-      if(processing)
+      if(processing) {
+        unprocessedLocation = Some(loc)
         return
+      }
       processing = true
       database.map { db =>
         val p = new AndroidPerspective(List(db), loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
@@ -258,6 +262,10 @@ class HermesService extends Service {
         previousPerspective = Some(p)
       }
       processing = false
+      unprocessedLocation.foreach { l =>
+        unprocessedLocation = None
+        onLocationChanged(l)
+      }
     }
 
     def onProviderDisabled(provider:String) {
