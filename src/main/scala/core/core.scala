@@ -63,7 +63,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
       "north"
   }
 
-  def toRelative = {
+  def toRelativeDirection = {
     if(heading < 15) Ahead
     else if(heading < 45) AheadAndRight
     else if(heading < 75) RightAndAhead
@@ -79,7 +79,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
     else Ahead
   }
 
-  override def toString = if(relative) toRelative.toString else toCardinalString
+  override def toString = if(relative) toRelativeDirection.toString else toCardinalString
 
   def toRoughRelativeString = {
     if(heading <= 30 || heading >= 330)
@@ -278,9 +278,14 @@ trait Perspective extends Position {
       Log.d("hermescheck", "Paths: "+nearestIntersectionCandidates.map(_.paths))
       nearestIntersectionCandidates.filter(_.paths.contains(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
-    candidates.find { c =>
+    .filter { c =>
       c.distanceTo(this) <= distance
     }
+    candidates.find { c =>
+      bearingTo(c).map { b =>
+        List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
+      }.getOrElse(false)
+    }.orElse(candidates.headOption)
   }
 
   val nearestPoints:List[Position]
