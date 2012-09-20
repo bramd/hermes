@@ -93,7 +93,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
 
   lazy val nearestPath:Option[String] = {
     previous.flatMap(_.nearestIntersection)
-    .filter(i => distanceTo(i).to(Metric).units <= 30)
+    .filter(i => distanceTo(i).to(Metric) <= (30 meters))
     .headOption.flatMap(v => previous.get.nearestPath)
     .orElse {
       var rv:Option[String] = None
