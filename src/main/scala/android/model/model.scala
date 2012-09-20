@@ -57,6 +57,13 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
     rv
   }
 
+  override def hashCode = db.hashCode+id.hashCode
+
+  override def equals(o:Any) = o match {
+    case i:AndroidIntersectionPosition if(i.hashCode == hashCode) => true
+    case _ => false
+  }
+
 }
 
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
