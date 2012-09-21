@@ -94,10 +94,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
   }
 
   lazy val nearestPath:Option[String] = {
-    previous.flatMap(_.nearestIntersection)
-    .filter(i => distanceTo(i).to(Metric) <= (40 meters))
-    .headOption.flatMap(v => previous.get.nearestPath)
-    .orElse {
+    calcNearestPath.orElse {
       var rv:Option[String] = None
       db.map(_.exec(
         """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name

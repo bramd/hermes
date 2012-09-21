@@ -260,6 +260,11 @@ trait Perspective extends Position {
 
   val nearestPath:Option[String]
 
+  protected def calcNearestPath =
+    previous.flatMap(_.nearestIntersection)
+    .filter(i => distanceTo(i).to(Metric) <= (40 meters))
+    .headOption.flatMap(v => previous.get.nearestPath)
+
   val speed:Speed
 
   val timestamp:Long
