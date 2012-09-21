@@ -22,7 +22,9 @@ private[model] class CB(cb:Map[String, String] => Boolean) extends Callback {
   }
 
   def newrow(row:Array[String]) = {
-    cb(columns.zip(row.toList).toMap)
+    cb(
+      columns.zip(row.toList).filter(_._2 != null).toMap
+    )
   }
 
 }
@@ -93,7 +95,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
 
   lazy val nearestPath:Option[String] = {
     previous.flatMap(_.nearestIntersection)
-    .filter(i => distanceTo(i).to(Metric) <= (30 meters))
+    .filter(i => distanceTo(i).to(Metric) <= (40 meters))
     .headOption.flatMap(v => previous.get.nearestPath)
     .orElse {
       var rv:Option[String] = None
@@ -104,7 +106,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           select rowid from SpatialIndex
           where f_table_name = 'ln_highway'
           and f_geometry_column = 'geometry'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+(50 meters).toDegreesAt(lat)+""")
+          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+(30 meters).toDegreesAt(lat)+""")
         ) order by distance limit 1""",
         { row:Map[String, String] =>
           rv = row.get("name")
