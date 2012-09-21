@@ -258,6 +258,8 @@ trait Perspective extends Position {
 
   val direction:Option[Direction]
 
+  protected val nearestPathThreshold = 30 meters
+
   val nearestPath:Option[String]
 
   protected def calcNearestPath =

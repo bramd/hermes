@@ -103,7 +103,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           select rowid from SpatialIndex
           where f_table_name = 'ln_highway'
           and f_geometry_column = 'geometry'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+(30 meters).toDegreesAt(lat)+""")
+          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
         ) order by distance limit 1""",
         { row:Map[String, String] =>
           rv = row.get("name")
