@@ -17,9 +17,3 @@ AndroidProject.androidSettings
 platformName in Android := "android-15"
 
 nativeLibrariesPath in Android <<= baseDirectory / "libs"
-
-resolvers += ScalaToolsSnapshots
-
-libraryDependencies := Seq(
-  "net.liftweb" %% "lift-actor" % "2.5-SNAPSHOT"
-)

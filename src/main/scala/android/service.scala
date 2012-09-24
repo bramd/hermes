@@ -12,7 +12,6 @@ import android.provider._
 import android.util.Log
 import android.widget._
 import jsqlite._
-import net.liftweb.actor._
 
 import info.hermesnav.core._
 import model.AndroidPerspective
@@ -203,22 +202,23 @@ class HermesService extends Service {
 
   private var previousPerspective:Option[Perspective] = None
 
-  class LocationUpdater(criteria:Option[Criteria] = None, preferredTo:List[LocationUpdater] = Nil) extends LocationListener with LiftActor {
+  class LocationUpdater(criteria:Option[Criteria] = None, val preferredTo:List[LocationUpdater] = Nil) extends LocationListener {
 
     private var enabled = false
 
-    def disable {
+    def disable() {
       if(!enabled) return
       locationManager.removeUpdates(this)
-      unavailabilityWarnFuture.foreach(_.cancel(true))
       enabled = false
+      Log.d("hermescheck2", "Disabling "+this)
     }
 
-    def enable {
+    def enable() {
       if(enabled) return
       val provider = criteria.map(locationManager.getBestProvider(_, true)).getOrElse(LocationManager.GPS_PROVIDER)
       locationManager.requestLocationUpdates(provider, 1000, 1f, this)
       enabled = true
+      Log.d("hermescheck2", "Enabling "+this)
     }
 
     private var processing = false
@@ -270,13 +270,13 @@ class HermesService extends Service {
 
     def onProviderDisabled(provider:String) {
       providerStatuses -= provider
+      preferredTo.foreach(_.enable())
     }
 
     def onProviderEnabled(provider:String) {
       providerStatuses(provider) = 0
+      preferredTo.foreach(_.disable())
     }
-
-    private var unavailabilityWarnFuture:Option[java.util.concurrent.ScheduledFuture[Unit]] = None
 
     def onStatusChanged(provider:String, status:Int, extras:Bundle) {
 
@@ -293,21 +293,12 @@ class HermesService extends Service {
         case Some(s) if(s == status) =>
         case Some(s) if(status == LocationProvider.AVAILABLE) =>
           preferredTo.foreach (_.disable)
-          unavailabilityWarnFuture.map { f =>
-            f.cancel(true)
-            f
-          }.getOrElse {
-            sendMessage(calcMsg)
-          }
-          unavailabilityWarnFuture = None
+          sendMessage(calcMsg)
         case _ =>
-          unavailabilityWarnFuture = Some(LAPinger.schedule(this, calcMsg, 30000))
+          sendMessage(calcMsg)
+          preferredTo.foreach(_.enable)
       }
       providerStatuses(provider) = status
-    }
-
-    protected def messageHandler = {
-      case m:String => sendMessage(m)
     }
 
   }
