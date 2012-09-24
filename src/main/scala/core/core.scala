@@ -3,8 +3,6 @@ package core
 
 import java.text.DecimalFormat
 
-import _root_.android.util.Log
-
 abstract class RelativeDirection(val description:String) {
   override val toString = description
 }
@@ -288,7 +286,6 @@ trait Perspective extends Position {
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
     val distance = (30 meters)
-    Log.d("hermescheck", "All: "+nearestIntersectionCandidates.sortBy(distanceTo(_)).map(_.name))
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.paths.contains(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
