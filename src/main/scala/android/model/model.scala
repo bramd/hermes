@@ -37,22 +37,12 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
-  lazy val segments = {
-    var rv = List[Segment]()
+  lazy val paths = {
+    var rv = List[Path]()
     db.map(_.exec(
-      "select name, node_from, node_to from roads where node_from = "+id+" or node_to = "+id,
-      { outer:Map[String, String] =>
-        val name = outer("name")
-        val fromID = outer("node_from").toInt
-        val toID = outer("node_to").toInt
-        val where = "node_id = "+(if(fromID == id) fromID else toID)
-        db.map(_.exec(
-          "select X(geometry) as lon, Y(geometry) as lat from roads_nodes where "+where+" limit 1",
-          { inner:Map[String, String] =>
-            rv ::= Segment(name, this, Point(inner("lat").toDouble, inner("lon").toDouble))
-            false
-          }
-        ))
+      "select name from roads where node_from = "+id+" or node_to = "+id,
+      { row:Map[String, String] =>
+        rv ::= AndroidPath(row.get("name").getOrElse(""))
         false
       }
     ))

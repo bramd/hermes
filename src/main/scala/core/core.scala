@@ -240,27 +240,25 @@ trait Path {
 
 }
 
-case class Segment(name:String, from:Position, to:Position)
-
 trait IntersectionPosition extends RelativePosition {
 
-  val segments:List[Segment]
-
-  lazy val paths = segments.map(_.name).distinct
+  val paths:List[Path]
 
   lazy val name = {
 
-    def countWays = segments.length match {
+    def countWays = paths.length match {
       case 1 => "Dead end"
       case v => v+"-way intersection"
     }
 
+    val pathNames = paths.map(_.name).distinct
+
     def pathsToSentence =
       perspective.nearestPath.map { np =>
-        if(paths.contains(np))
-          np :: paths.filterNot(_ == np)
-        else paths
-      }.getOrElse(paths).mkString(", ")
+        if(pathNames.contains(np))
+          np :: pathNames.filterNot(_ == np)
+        else pathNames
+      }.getOrElse(pathNames).mkString(", ")
 
     countWays+": "+pathsToSentence
   }
