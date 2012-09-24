@@ -246,7 +246,9 @@ trait IntersectionPosition extends RelativePosition {
 
     def pathsToSentence =
       perspective.nearestPath.map { np =>
-        np :: paths.filterNot(_ == np)
+        if(paths.contains(np))
+          np :: paths.filterNot(_ == np)
+        else paths
       }.getOrElse(paths).mkString(", ")
 
     countWays+": "+pathsToSentence
@@ -281,8 +283,8 @@ trait Perspective extends Position {
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
     val distance = (30 meters)
+    Log.d("hermescheck", "All: "+nearestIntersectionCandidates.sortBy(distanceTo(_)).map(_.name))
     val candidates = nearestPath.map { np =>
-      Log.d("hermescheck", "Paths: "+nearestIntersectionCandidates.map(_.paths))
       nearestIntersectionCandidates.filter(_.paths.contains(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
     .filter { c =>

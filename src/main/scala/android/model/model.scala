@@ -45,7 +45,7 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
         val name = outer("name")
         val fromID = outer("node_from").toInt
         val toID = outer("node_to").toInt
-        val where = "node_id = "+(if(fromID == id) toID else fromID)
+        val where = "node_id = "+(if(fromID == id) fromID else toID)
         db.map(_.exec(
           "select X(geometry) as lon, Y(geometry) as lat from roads_nodes where "+where+" limit 1",
           { inner:Map[String, String] =>
@@ -77,7 +77,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
     db.map(_.exec(
       """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
       X(geometry) as lon,
-      Y(geometry) as lat, rowid as id
+      Y(geometry) as lat, node_id as id
       from roads_nodes
       where roads_nodes.rowid in (
         select rowid from SpatialIndex
