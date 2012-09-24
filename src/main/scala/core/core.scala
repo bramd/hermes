@@ -1,6 +1,8 @@
 package info.hermesnav
 package core
 
+import java.text.DecimalFormat
+
 import _root_.android.util.Log
 
 abstract class RelativeDirection(val description:String) {
@@ -111,24 +113,27 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
     case v => Distance(units*v.conversionFactor, v)
   }
 
-  override def toString = system match {
-    case Imperial =>
-      if(units < 1056 && !standardized) {
-        if(units == 1)
-          "1 foot"
-        else
-          units+" feet"
-      } else {
-        "%1.1f miles".format(units/5280)
-      }
-    case Metric =>
-      if(units < 1000 && !standardized) {
-        if(units == 1)
-          "1 meter"
-        else
-          units+" meters"
-      } else
-        "%1.1f kilometers".format(units/1000)
+  override def toString = {
+    val df = new DecimalFormat("#.#")
+    system match {
+      case Imperial =>
+        if(units < 1056 && !standardized) {
+          if(units == 1)
+            "1 foot"
+          else
+            df.format(units)+" feet"
+        } else {
+          df.format(units/5280)+" miles"
+        }
+      case Metric =>
+        if(units < 1000 && !standardized) {
+          if(units == 1)
+            "1 meter"
+          else
+            df.format(units)+" meters"
+        } else
+          df.format(units/1000)+" kilometers"
+    }
   }
 
   def compare(that:Distance):Int = {
