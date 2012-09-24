@@ -13,10 +13,10 @@ class Hermes extends Activity with ServiceConnection {
 
   private var svc:Option[HermesService] = None
 
-  private def updateNearestPath(np:Option[String]) {
+  private def updateNearestPath(np:Option[Path]) {
     val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
     v.setText(np.map { p =>
-      getString(R.string.nearestPath, p)
+      getString(R.string.nearestPath, p.name)
     }.getOrElse(""))
   }
 

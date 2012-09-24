@@ -232,6 +232,14 @@ trait RelativePosition extends Position {
 
 }
 
+trait Path {
+
+  val name:String
+
+  override def hashCode = name.hashCode
+
+}
+
 case class Segment(name:String, from:Position, to:Position)
 
 trait IntersectionPosition extends RelativePosition {
@@ -265,11 +273,11 @@ trait Perspective extends Position {
 
   protected val nearestPathThreshold = 30 meters
 
-  val nearestPath:Option[String]
+  val nearestPath:Option[Path]
 
   protected def calcNearestPath =
     previous.flatMap(_.nearestIntersection)
-    .filter(i => distanceTo(i).to(Metric) <= (40 meters))
+    .filter(i => distanceTo(i).to(Metric) <= (50 meters))
     .headOption.flatMap(v => previous.get.nearestPath)
 
   val speed:Speed
@@ -285,7 +293,7 @@ trait Perspective extends Position {
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
-    val distance = (30 meters)
+    val distance = 40 meters
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.paths.contains(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))

@@ -156,22 +156,22 @@ class HermesService extends Service {
 
   def removeProviderChangedHandler(f:(Option[String]) => Unit) = providerChangedHandlers -= f
 
-  private var lastNearestPath:Option[String] = None
+  private var lastNearestPath:Option[Path] = None
 
-  private val nearestPathChangedHandlers = ListBuffer[(Option[String]) => Unit]()
+  private val nearestPathChangedHandlers = ListBuffer[(Option[Path]) => Unit]()
 
-  def onNearestPathChanged(f:(Option[String]) => Unit) = {
+  def onNearestPathChanged(f:(Option[Path]) => Unit) = {
     f(lastNearestPath)
     nearestPathChangedHandlers += f
   }
 
-  def nearestPathChanged(v:Option[String]) = nearestPathChangedHandlers.foreach(_(v))
+  def nearestPathChanged(v:Option[Path]) = nearestPathChangedHandlers.foreach(_(v))
 
-  def removeNearestPathChangedHandler(f:(Option[String]) => Unit) = nearestPathChangedHandlers -= f
+  def removeNearestPathChangedHandler(f:(Option[Path]) => Unit) = nearestPathChangedHandlers -= f
 
   onNearestPathChanged { path =>
     path.foreach { p =>
-      sendMessage(getString(R.string.nearestPath, p))
+      sendMessage(getString(R.string.nearestPath, p.name))
     }
   }
 

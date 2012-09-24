@@ -68,6 +68,8 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
 
 }
 
+case class AndroidPath(val name:String) extends Path
+
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
   val nearestPoints = Nil
@@ -93,9 +95,9 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
     rv
   }
 
-  lazy val nearestPath:Option[String] = {
+  lazy val nearestPath:Option[Path] = {
     calcNearestPath.orElse {
-      var rv:Option[String] = None
+      var rv:Option[Path] = None
       db.map(_.exec(
         """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name
         from ln_highway
@@ -106,7 +108,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
         ) order by distance limit 1""",
         { row:Map[String, String] =>
-          rv = row.get("name")
+          rv = row.get("name").map(AndroidPath(_))
           false
         }
       ))
