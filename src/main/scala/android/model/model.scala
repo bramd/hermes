@@ -37,18 +37,36 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 case class AndroidPath(val name:String, val classification:Option[String]) extends Path
 
+object AndroidPath {
+  def apply(db:Database, id:Int):Option[AndroidPath] = {
+    var rv:Option[AndroidPath] = None
+    db.exec(
+      "select name, sub_type from ln_highway where id = "+id,
+      { row:Map[String, String] =>
+        rv = Some(new AndroidPath(row.get("name").getOrElse(""), row.get("sub_type")))
+        false
+      }
+    )
+    rv
+  }
+}
+
 class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
   lazy val paths = {
     var rv = List[Path]()
-    db.map(_.exec(
-      "select name, class from roads where node_from = "+id+" or node_to = "+id,
-      { row:Map[String, String] =>
-        rv ::= AndroidPath(row.get("name").getOrElse(""), row.get("class"))
-        false
-      }
-    ))
-    rv
+    db.map { d =>
+      d.exec(
+        "select osm_id, name, class from roads where node_from = "+id+" or node_to = "+id,
+        { row:Map[String, String] =>
+          rv ::= AndroidPath(d, row("osm_id").toInt).getOrElse {
+            new AndroidPath(name, row.get("class"))
+          }
+          false
+        }
+      )
+    }
+    rv.distinct
   }
 
   override def hashCode = db.hashCode+id.hashCode
