@@ -66,22 +66,36 @@ object AndroidPath {
   }
 }
 
-class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
+class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
   lazy val paths = {
     var rv = List[Path]()
-    db.map { d =>
-      d.exec(
-        "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
-        { row:Map[String, String] =>
-          rv ::= AndroidPath(d, row("osm_id").toInt).getOrElse {
-            new AndroidPath(d, name, row.get("class"), row("geom"))
-          }
-          false
+    db.exec(
+      "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
+      { row:Map[String, String] =>
+        rv ::= AndroidPath(db, row("osm_id").toInt).getOrElse {
+          new AndroidPath(db, name, row.get("class"), row("geom"))
         }
-      )
-    }
+        false
+      }
+    )
     rv.distinct
+  }
+
+  lazy val neighbors = {
+    var ids = List[Int]()
+    db.exec(
+      "select osm_id, node_from, node_to from roads where node_from = "+id+" or node_to = "+id,
+      { row:Map[String, String] =>
+        val from = row("node_from").toInt
+        val to = row("node_to").toInt
+        ids ::= (if(from == id) to else from)
+        false
+      }
+    )
+    ids.map { id =>
+      AndroidIntersectionPosition(db, id, perspective)
+    }.filterNot(_ == None).map(_.get)
   }
 
   override def hashCode = db.hashCode+id.hashCode
@@ -93,28 +107,45 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
 
 }
 
+object AndroidIntersectionPosition {
+  def apply(db:Database, id:Int, perspective:Perspective):Option[AndroidIntersectionPosition] = {
+    var rv:Option[AndroidIntersectionPosition] = None
+    db.exec(
+      "select X(geometry) as lon, Y(geometry) as lat from roads_nodes where node_id = "+id,
+      { row:Map[String, String] =>
+        rv = Some(new AndroidIntersectionPosition(db, id, perspective, row("lat").toDouble, row("lon").toDouble))
+        false
+      }
+    )
+    rv
+  }
+}
+
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
   val nearestPoints = Nil
 
   lazy val nearestIntersectionCandidates = {
     var rv = List[IntersectionPosition]()
-    db.map(_.exec(
-      """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
-      X(geometry) as lon,
-      Y(geometry) as lat, node_id as id
-      from roads_nodes
-      where roads_nodes.rowid in (
-        select rowid from SpatialIndex
-        where f_table_name = 'roads_nodes'
-        and f_geometry_column = 'geometry'
-        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+closeProximityDegrees+""")
-      ) order by distance""",
-      { row:Map[String, String] =>
-        rv ::= new AndroidIntersectionPosition(db, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
-        false
-      }
-    ))
+    db.map { d =>
+      d.exec(
+        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
+        X(geometry) as lon,
+        Y(geometry) as lat, node_id as id
+        from roads_nodes
+        where roads_nodes.rowid in (
+          select rowid from SpatialIndex
+          where f_table_name = 'roads_nodes'
+          and f_geometry_column = 'geometry'
+          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+closeProximityDegrees+""")
+        ) order by distance""",
+        { row:Map[String, String] =>
+          rv ::= new AndroidIntersectionPosition(d, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
+          false
+        }
+      )
+    }
+    
     rv
   }
 

@@ -1,6 +1,8 @@
 package info.hermesnav
 package core
 
+import _root_.android.util.Log
+
 import java.text.DecimalFormat
 
 abstract class RelativeDirection(val description:String) {
@@ -248,9 +250,11 @@ trait IntersectionPosition extends RelativePosition {
 
   val paths:List[Path]
 
+  val neighbors:List[IntersectionPosition]
+
   lazy val name = {
 
-    def countWays = paths.length match {
+    def countWays = neighbors.length match {
       case 1 => "Dead end"
       case v => v+"-way intersection"
     }
@@ -266,6 +270,8 @@ trait IntersectionPosition extends RelativePosition {
 
     countWays+": "+pathsToSentence
   }
+
+  override def toString = name
 
 }
 
@@ -288,7 +294,7 @@ trait Perspective extends Position {
 
   protected var previous:Option[Perspective]
 
-  protected val closeProximity = (math.max(100, speed.to(Metric).distance.units*50)) meters
+  protected val closeProximity = (math.max(300, speed.to(Metric).distance.units*50)) meters
 
   protected val closeProximityDegrees = closeProximity.toDegreesAt(lat)
 
