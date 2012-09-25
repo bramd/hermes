@@ -238,6 +238,8 @@ trait Path {
 
   val classification:Option[String]
 
+  def crosses_?(p:Position):Boolean
+
   override val toString = name
 
 }

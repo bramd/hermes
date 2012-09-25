@@ -35,7 +35,22 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 }
 
-case class AndroidPath(val name:String, val classification:Option[String], geom:String) extends Path
+case class AndroidPath(db:Database, val name:String, val classification:Option[String], geom:String) extends Path {
+
+  def crosses_?(p:Position) = {
+    var rv = false
+    db.exec(
+      "select crosses(fromWKT('"+geom+"'), makePoint("+p.lon+", "+p.lat+")) as crosses",
+      { row:Map[String, String] =>
+        if(row("crosses").toInt == 1)
+          rv = true
+        false
+      }
+    )
+    rv
+  }
+
+}
 
 object AndroidPath {
   def apply(db:Database, id:Int):Option[AndroidPath] = {
@@ -43,7 +58,7 @@ object AndroidPath {
     db.exec(
       "select name, sub_type, asWKT(geometry) as geom from ln_highway where id = "+id,
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
+        rv = Some(new AndroidPath(db, row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
         false
       }
     )
@@ -60,7 +75,7 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
         "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
         { row:Map[String, String] =>
           rv ::= AndroidPath(d, row("osm_id").toInt).getOrElse {
-            new AndroidPath(name, row.get("class"), row("geom"))
+            new AndroidPath(d, name, row.get("class"), row("geom"))
           }
           false
         }
@@ -106,20 +121,22 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
   lazy val nearestPath:Option[Path] = {
     calcNearestPath.orElse {
       var rv:Option[Path] = None
-      db.map(_.exec(
-        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type, asWKT(geometry) as geom
-        from ln_highway
-        where ln_highway.rowid in (
-          select rowid from SpatialIndex
-          where f_table_name = 'ln_highway'
-          and f_geometry_column = 'geometry'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
-        ) order by distance limit 1""",
-        { row:Map[String, String] =>
-          rv = Some(AndroidPath(row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
-          false
-        }
-      ))
+      db.map { d =>
+        d.exec(
+          """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type, asWKT(geometry) as geom
+          from ln_highway
+          where ln_highway.rowid in (
+            select rowid from SpatialIndex
+            where f_table_name = 'ln_highway'
+            and f_geometry_column = 'geometry'
+            and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
+          ) order by distance limit 1""",
+          { row:Map[String, String] =>
+            rv = Some(AndroidPath(d, row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
+            false
+          }
+        )
+      }
       rv
     }
   }
