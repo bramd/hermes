@@ -35,15 +35,15 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 }
 
-case class AndroidPath(val name:String, val classification:Option[String]) extends Path
+case class AndroidPath(val name:String, val classification:Option[String], geom:String) extends Path
 
 object AndroidPath {
   def apply(db:Database, id:Int):Option[AndroidPath] = {
     var rv:Option[AndroidPath] = None
     db.exec(
-      "select name, sub_type from ln_highway where id = "+id,
+      "select name, sub_type, asWKT(geometry) as geom from ln_highway where id = "+id,
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(row.get("name").getOrElse(""), row.get("sub_type")))
+        rv = Some(new AndroidPath(row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
         false
       }
     )
@@ -57,10 +57,10 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
     var rv = List[Path]()
     db.map { d =>
       d.exec(
-        "select osm_id, name, class from roads where node_from = "+id+" or node_to = "+id,
+        "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
         { row:Map[String, String] =>
           rv ::= AndroidPath(d, row("osm_id").toInt).getOrElse {
-            new AndroidPath(name, row.get("class"))
+            new AndroidPath(name, row.get("class"), row("geom"))
           }
           false
         }
@@ -107,7 +107,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
     calcNearestPath.orElse {
       var rv:Option[Path] = None
       db.map(_.exec(
-        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type
+        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type, asWKT(geometry) as geom
         from ln_highway
         where ln_highway.rowid in (
           select rowid from SpatialIndex
@@ -116,7 +116,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
         ) order by distance limit 1""",
         { row:Map[String, String] =>
-          rv = Some(AndroidPath(row.get("name").getOrElse(""), row.get("sub_type")))
+          rv = Some(AndroidPath(row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
           false
         }
       ))
