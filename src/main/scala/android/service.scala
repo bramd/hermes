@@ -43,7 +43,7 @@ class HermesService extends Service {
       val dbFile = new File(dir, "map.db")
       if(!dbFile.exists)
         dbFile.createNewFile()
-      db.open(dbFile.toString, Constants.SQLITE_OPEN_READONLY)
+      db.open(dbFile.toString, Constants.SQLITE_OPEN_READWRITE)
       database = Some(db)
       sendMessage(getString(R.string.mapLoaded))
     } catch {
