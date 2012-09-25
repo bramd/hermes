@@ -236,7 +236,9 @@ trait Path {
 
   val name:String
 
-  override def hashCode = name.hashCode
+  val classification:Option[String]
+
+  override val toString = name
 
 }
 
@@ -291,7 +293,7 @@ trait Perspective extends Position {
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
-    val distance = 40 meters
+    val distance = (40 meters)
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.paths.contains(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))

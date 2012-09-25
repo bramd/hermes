@@ -35,14 +35,16 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 }
 
+case class AndroidPath(val name:String, val classification:Option[String]) extends Path
+
 class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
   lazy val paths = {
     var rv = List[Path]()
     db.map(_.exec(
-      "select name from roads where node_from = "+id+" or node_to = "+id,
+      "select name, class from roads where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
-        rv ::= AndroidPath(row.get("name").getOrElse(""))
+        rv ::= AndroidPath(row.get("name").getOrElse(""), row.get("class"))
         false
       }
     ))
@@ -57,8 +59,6 @@ class AndroidIntersectionPosition(db:List[Database], id:Int, val perspective:Per
   }
 
 }
-
-case class AndroidPath(val name:String) extends Path
 
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
@@ -89,7 +89,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
     calcNearestPath.orElse {
       var rv:Option[Path] = None
       db.map(_.exec(
-        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name
+        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type
         from ln_highway
         where ln_highway.rowid in (
           select rowid from SpatialIndex
@@ -98,7 +98,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
         ) order by distance limit 1""",
         { row:Map[String, String] =>
-          rv = row.get("name").map(AndroidPath(_))
+          rv = Some(AndroidPath(row.get("name").getOrElse(""), row.get("sub_type")))
           false
         }
       ))
