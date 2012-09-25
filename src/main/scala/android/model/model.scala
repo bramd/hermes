@@ -37,6 +37,18 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 case class AndroidPath(db:Database, val name:String, val classification:Option[String], geom:String) extends Path {
 
+  private[model] def joinWith(other:AndroidPath) = {
+    var rv:AndroidPath = null
+    db.exec(
+      "select asWKT(gUnion(geomFromText('"+geom+"'), geomFromText('"+other.geom+"'))) as geom",
+      { row:Map[String, String] =>
+        rv = copy(geom = row("geom"))
+        false
+      }
+    )
+    rv
+  }
+
   def crosses_?(p:Position) = {
     var rv = false
     db.exec(
@@ -69,12 +81,18 @@ object AndroidPath {
 class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
   lazy val paths = {
-    var rv = List[Path]()
+    var rv = List[AndroidPath]()
     db.exec(
       "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
-        rv ::= AndroidPath(db, row("osm_id").toInt).getOrElse {
+        var path = AndroidPath(db, row("osm_id").toInt).getOrElse {
           new AndroidPath(db, name, row.get("class"), row("geom"))
+        }
+        rv.find(_.name == path.name).headOption.map { same =>
+          rv = rv.filterNot(_ == same)
+          rv ::= same.joinWith(path)
+        }.getOrElse {
+          rv ::= path
         }
         false
       }
