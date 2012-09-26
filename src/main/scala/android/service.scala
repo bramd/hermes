@@ -226,16 +226,20 @@ class HermesService extends Service {
     private var unprocessedLocation:Option[Location] = None
 
     def onLocationChanged(loc:Location) {
-      val dir = Option(loc.getBearing).map(Direction(_))
-      if(dir != lastDirection)
-        directionChanged(dir)
-      lastDirection = dir
       val spd = Option(loc.getSpeed).map { s =>
         Speed(Distance(s), second)
       }
       if(lastSpeed != spd)
         speedChanged(spd.map(_ to hours))
       lastSpeed = spd.map(_ to hours)
+      val dir = spd.flatMap { s =>
+        if(s.distance.units == 0)
+          lastDirection
+        else None
+      }.orElse(Option(loc.getBearing).map(Direction(_)))
+      if(dir != lastDirection)
+        directionChanged(dir)
+      lastDirection = dir
       val acc = Option(loc.getAccuracy).map(Distance(_))
       if(acc != lastAccuracy)
         accuracyChanged(acc)
