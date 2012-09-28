@@ -210,7 +210,6 @@ class HermesService extends Service {
       if(!enabled) return
       locationManager.removeUpdates(this)
       enabled = false
-      Log.d("hermescheck2", "Disabling "+this)
     }
 
     def enable() {
@@ -218,12 +217,9 @@ class HermesService extends Service {
       val provider = criteria.map(locationManager.getBestProvider(_, true)).getOrElse(LocationManager.GPS_PROVIDER)
       locationManager.requestLocationUpdates(provider, 1000, 1f, this)
       enabled = true
-      Log.d("hermescheck2", "Enabling "+this)
     }
 
     private var processing = false
-
-    private var unprocessedLocation:Option[Location] = None
 
     def onLocationChanged(loc:Location) {
       val spd = Option(loc.getSpeed).map { s =>
@@ -248,10 +244,8 @@ class HermesService extends Service {
       if(p != lastProvider)
         providerChanged(p)
       lastProvider = p
-      if(processing) {
-        unprocessedLocation = Some(loc)
+      if(processing)
         return
-      }
       processing = true
       database.map { db =>
         val p = new AndroidPerspective(List(db), loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
@@ -266,10 +260,6 @@ class HermesService extends Service {
         previousPerspective = Some(p)
       }
       processing = false
-      unprocessedLocation.foreach { l =>
-        unprocessedLocation = None
-        onLocationChanged(l)
-      }
     }
 
     def onProviderDisabled(provider:String) {
