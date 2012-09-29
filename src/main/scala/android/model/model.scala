@@ -35,25 +35,28 @@ class AndroidRelativePosition(val perspective:Perspective, val lat:Double, val l
 
 }
 
-case class AndroidPath(db:Database, val name:String, val classification:Option[String], geom:String) extends Path {
+case class AndroidPath(db:Database, ids:List[Int], val name:String, val classification:Option[String], geom:String) extends Path {
 
   private[model] def joinWith(other:AndroidPath) = {
     var rv:AndroidPath = null
     db.exec(
       "select asWKT(gUnion(geomFromText('"+geom+"'), geomFromText('"+other.geom+"'))) as geom",
       { row:Map[String, String] =>
-        rv = copy(geom = row("geom"))
+        rv = copy(ids = (other.ids++ids).distinct, geom = row("geom"))
         false
       }
     )
     rv
   }
 
-  def crosses_?(p:Position) = {
+  def crosses_?(other:Position) = {
     var rv = false
+    Log.d("hermescheck40", "Checking "+name)
+    Log.d("hermescheck40", "select crosses(geomFromText('"+geom+"'), BuildCircleMBR("+other.lon+", "+other.lat+", 0.001)) as crosses")
     db.exec(
-      "select crosses(fromWKT('"+geom+"'), makePoint("+p.lon+", "+p.lat+")) as crosses",
+      "select crosses(geomFromText('"+geom+"'), BuildCircleMBR("+other.lon+", "+other.lat+", 0.001)) as crosses",
       { row:Map[String, String] =>
+        Log.d("hermescheck40", "Got "+row)
         if(row("crosses").toInt == 1)
           rv = true
         false
@@ -70,7 +73,7 @@ object AndroidPath {
     db.exec(
       "select name, sub_type, asWKT(geometry) as geom from ln_highway where id = "+id,
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(db, row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
+        rv = Some(new AndroidPath(db, List(id), row.get("name").orElse(row.get("sub_type")).getOrElse(""), row.get("sub_type"), row("geom")))
         false
       }
     )
@@ -80,13 +83,13 @@ object AndroidPath {
 
 class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
-  lazy val paths = {
+  val paths = {
     var rv = List[AndroidPath]()
     db.exec(
       "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
-        var path = AndroidPath(db, row("osm_id").toInt).getOrElse {
-          new AndroidPath(db, name, row.get("class"), row("geom"))
+        val path = AndroidPath(db, row("osm_id").toInt).getOrElse {
+          new AndroidPath(db, List(row("osm_id").toInt), row.get("name").orElse(row.get("class")).getOrElse(""), row.get("class"), row("geom"))
         }
         rv.find(_.name == path.name).headOption.map { same =>
           rv = rv.filterNot(_ == same)
@@ -98,6 +101,20 @@ class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspecti
       }
     )
     rv.distinct
+  }
+
+  def pathsExcept(path:Path) = paths.filterNot(_.name == path.name)
+
+  def includes_?(path:Path) = path match {
+    case p:AndroidPath =>
+      val ids:List[Int] = paths.map(_.ids).flatten.distinct
+      var rv = false
+      p.ids.foreach { id =>
+        if(ids.contains(id))
+          rv = true
+      }
+      rv
+    case _ => false
   }
 
   lazy val neighbors = {
@@ -143,7 +160,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
 
   val nearestPoints = Nil
 
-  lazy val nearestIntersectionCandidates = {
+  val nearestIntersectionCandidates = {
     var rv = List[IntersectionPosition]()
     db.map { d =>
       d.exec(
@@ -155,7 +172,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
           select rowid from SpatialIndex
           where f_table_name = 'roads_nodes'
           and f_geometry_column = 'geometry'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+closeProximityDegrees+""")
+          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestIntersectionDistance.toDegreesAt(lat)+""")
         ) order by distance""",
         { row:Map[String, String] =>
           rv ::= new AndroidIntersectionPosition(d, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
@@ -167,12 +184,12 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
     rv
   }
 
-  lazy val nearestPath:Option[Path] = {
+  val nearestPath:Option[Path] = {
     calcNearestPath.orElse {
       var rv:Option[Path] = None
       db.map { d =>
         d.exec(
-          """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type, asWKT(geometry) as geom
+          """select id, Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance, name, sub_type, asWKT(geometry) as geom
           from ln_highway
           where ln_highway.rowid in (
             select rowid from SpatialIndex
@@ -181,7 +198,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(d, row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
+            rv = Some(AndroidPath(d, List(row("id").toInt), row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
             false
           }
         )

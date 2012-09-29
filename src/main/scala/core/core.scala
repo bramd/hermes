@@ -240,7 +240,7 @@ trait Path {
 
   val classification:Option[String]
 
-  def crosses_?(p:Position):Boolean
+  def crosses_?(other:Position):Boolean
 
   override val toString = name
 
@@ -249,6 +249,10 @@ trait Path {
 trait IntersectionPosition extends RelativePosition {
 
   val paths:List[Path]
+
+  def pathsExcept(path:Path):List[Path]
+
+  def includes_?(path:Path):Boolean
 
   val neighbors:List[IntersectionPosition]
 
@@ -259,14 +263,25 @@ trait IntersectionPosition extends RelativePosition {
       case v => v+"-way intersection"
     }
 
-    val pathNames = paths.map(_.name).distinct
-
-    def pathsToSentence =
+    val myPaths =
       perspective.nearestPath.map { np =>
-        if(pathNames.contains(np))
-          np :: pathNames.filterNot(_ == np)
-        else pathNames
-      }.getOrElse(pathNames).mkString(", ")
+        if(includes_?(np))
+          np :: pathsExcept(np)
+        else paths
+      }.getOrElse(paths)
+
+    val pathsToSentence = paths.size match {
+      case 2 =>
+        val first = myPaths.head
+        val second = myPaths.reverse.head
+        Log.d("hermescheck40", "Cross check: "+paths.mkString(", "))
+        first.name+" "+(if(first.crosses_?(this))
+          "crossing"
+        else
+          "and"
+        )+" "+second.name
+      case _ => myPaths.map(_.name).mkString(", ")
+    }
 
     countWays+": "+pathsToSentence
   }
@@ -283,10 +298,10 @@ trait Perspective extends Position {
 
   val nearestPath:Option[Path]
 
-  protected def calcNearestPath =
+  protected def calcNearestPath:Option[Path] =
     previous.flatMap(_.nearestIntersection)
-    .filter(i => distanceTo(i).to(Metric) <= (50 meters))
-    .headOption.flatMap(v => previous.get.nearestPath)
+    .find(i => distanceTo(i).to(Metric) <= (30 meters))
+    .flatMap(v => previous.get.nearestPath)
 
   val speed:Speed
 
@@ -294,16 +309,15 @@ trait Perspective extends Position {
 
   protected var previous:Option[Perspective]
 
-  protected val closeProximity = (math.max(300, speed.to(Metric).distance.units*50)) meters
-
-  protected val closeProximityDegrees = closeProximity.toDegreesAt(lat)
+  protected def nearestIntersectionDistance = 40 meters
 
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
-    val distance = (40 meters)
+    Log.d("hermescheck", "All: "+nearestIntersectionCandidates)
+    val distance = (30 meters)
     val candidates = nearestPath.map { np =>
-      nearestIntersectionCandidates.filter(_.paths.contains(np))
+      nearestIntersectionCandidates.filter(_.includes_?(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
     .filter { c =>
       c.distanceTo(this) <= distance
