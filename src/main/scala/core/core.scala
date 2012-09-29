@@ -290,6 +290,14 @@ trait IntersectionPosition extends RelativePosition {
 
 }
 
+trait PointOfInterest extends RelativePosition {
+
+  val name:String
+
+  val classification:Option[String]
+
+}
+
 trait Perspective extends Position {
 
   val direction:Option[Direction]
@@ -329,7 +337,7 @@ trait Perspective extends Position {
     }.orElse(candidates.headOption)
   }
 
-  val nearestPoints:List[Position]
+  def nearestPoints(limit:Int = 10, skip:Int = 0):List[PointOfInterest]
 
   def bearingTo(p:Position) = direction.map(_ & courseTo(p))
 

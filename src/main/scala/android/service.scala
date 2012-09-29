@@ -200,6 +200,15 @@ class HermesService extends Service {
     }
   }
 
+  private val nearestPointsHandlers = ListBuffer[(List[PointOfInterest]) => Unit]()
+
+  def onNearestPoints(f:(List[PointOfInterest]) => Unit) =
+    nearestPointsHandlers += f
+
+  def nearestPoints(v:List[PointOfInterest]) = nearestPointsHandlers.foreach(_(v))
+
+  def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
+
   private var previousPerspective:Option[Perspective] = None
 
   class LocationUpdater(criteria:Option[Criteria] = None, val preferredTo:List[LocationUpdater] = Nil) extends LocationListener {
@@ -257,6 +266,8 @@ class HermesService extends Service {
         if(ni != lastNearestIntersection)
           nearestIntersectionChanged(ni)
         lastNearestIntersection = ni
+        val points = p.nearestPoints()
+        nearestPoints(points)
         previousPerspective = Some(p)
       }
       processing = false

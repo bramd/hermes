@@ -51,6 +51,12 @@ class Hermes extends Activity with ServiceConnection {
     v.setText(p.getOrElse(""))
   }
 
+  private def updateNearestPoints(points:List[PointOfInterest]) {
+    val list = findViewById(R.id.points).asInstanceOf[ListView]
+    val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)
+    list.setAdapter(adapter)
+  }
+
   override def onCreate(bundle:Bundle) {
     super.onCreate(bundle)
     setContentView(R.layout.info)
@@ -67,6 +73,7 @@ class Hermes extends Activity with ServiceConnection {
       s.removeSpeedChangedHandler(updateSpeed)
       s.removeAccuracyChangedHandler(updateAccuracy)
       s.removeProviderChangedHandler(updateProvider)
+      s.removeNearestPointsHandler(updateNearestPoints)
     }
   }
 
@@ -79,6 +86,7 @@ class Hermes extends Activity with ServiceConnection {
     s.onSpeedChanged(updateSpeed)
     s.onAccuracyChanged(updateAccuracy)
     s.onProviderChanged(updateProvider)
+    s.onNearestPoints(updateNearestPoints)
   }
 
   def onServiceDisconnected(className:ComponentName) {

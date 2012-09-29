@@ -156,9 +156,39 @@ object AndroidIntersectionPosition {
   }
 }
 
+case class AndroidPointOfInterest(val perspective:Perspective, val name:String, val classification:Option[String], val lat:Double, val lon:Double) extends PointOfInterest {
+  override val toString = name+": "+distanceTo(perspective)+perspective.bearingTo(this).map(" "+_).getOrElse("")
+}
+
+
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
-  val nearestPoints = Nil
+  def nearestPoints(limit:Int = 10, skip:Int = 0) = {
+    var rv = List[PointOfInterest]()
+    db.map(_.exec(
+      """select name, sub_type,
+      X(PointOnSurface(geometry)) as lon, Y(PointOnSurface(geometry)) as lat,
+      Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance
+      from pg_amenity
+      where rowid in (
+        select rowid from SpatialIndex
+        where f_table_name = 'pg_amenity'
+        and f_geometry_column = 'geometry'
+        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", 0.1))
+      order by distance limit """+limit,
+      { row:Map[String, String] =>
+        val cls = row.get("sub_type").flatMap { c =>
+          if(c.isEmpty)
+            None
+          else Some(c.replace("_", " "))
+        }
+        val n = row.get("name").orElse(cls).getOrElse("Unnamed")
+        rv ::= AndroidPointOfInterest(this, n, cls, row("lat").toDouble, row("lon").toDouble)
+        false
+      }
+    ))
+    rv.sortBy(distanceTo(_))
+  }
 
   val nearestIntersectionCandidates = {
     var rv = List[IntersectionPosition]()
