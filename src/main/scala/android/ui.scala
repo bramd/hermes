@@ -60,7 +60,6 @@ class Hermes extends Activity with ServiceConnection {
   override def onCreate(bundle:Bundle) {
     super.onCreate(bundle)
     setContentView(R.layout.info)
-    startService(new Intent(this, classOf[HermesService]))
     bindService(new Intent(this, classOf[HermesService]), this, Context.BIND_AUTO_CREATE)
   }
 
