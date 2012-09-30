@@ -83,7 +83,7 @@ object AndroidPath {
 
 class AndroidIntersectionPosition(db:Database, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
 
-  val paths = {
+  lazy val paths = {
     var rv = List[AndroidPath]()
     db.exec(
       "select osm_id, name, class, asWKT(geometry) as geom from roads where node_from = "+id+" or node_to = "+id,
@@ -156,7 +156,7 @@ object AndroidIntersectionPosition {
   }
 }
 
-case class AndroidPointOfInterest(val perspective:Perspective, val name:String, val classification:Option[String], val lat:Double, val lon:Double) extends PointOfInterest {
+case class AndroidPointOfInterest(val perspective:Perspective, val name:String, val classification:List[String], val lat:Double, val lon:Double) extends PointOfInterest {
   override val toString = name+": "+distanceTo(perspective)+perspective.bearingTo(this).map(" "+_).getOrElse("")
 }
 
@@ -166,23 +166,23 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
   def nearestPoints(limit:Int = 10, skip:Int = 0) = {
     var rv = List[PointOfInterest]()
     db.map(_.exec(
-      """select name, sub_type,
+      """select *,
       X(PointOnSurface(geometry)) as lon, Y(PointOnSurface(geometry)) as lat,
       Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance
-      from pg_amenity
+      from points
       where rowid in (
         select rowid from SpatialIndex
-        where f_table_name = 'pg_amenity'
+        where f_table_name = 'points'
         and f_geometry_column = 'geometry'
-        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", 0.1))
+        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", 0.02))
       order by distance limit """+limit,
       { row:Map[String, String] =>
-        val cls = row.get("sub_type").flatMap { c =>
-          if(c.isEmpty)
-            None
-          else Some(c.replace("_", " "))
-        }
-        val n = row.get("name").orElse(cls).getOrElse("Unnamed")
+        val cls = row.get("type").map { t =>
+          row.get("sub_type").map { st =>
+            t :: st :: Nil
+          }.getOrElse(List(t))
+        }.getOrElse(Nil)
+        val n = row.get("name").orElse(cls.reverse.headOption).getOrElse("Unnamed")
         rv ::= AndroidPointOfInterest(this, n, cls, row("lat").toDouble, row("lon").toDouble)
         false
       }

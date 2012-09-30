@@ -121,7 +121,7 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
           if(units == 1)
             "1 foot"
           else
-            df.format(units)+" feet"
+            units.toInt+" feet"
         } else {
           df.format(units/5280)+" miles"
         }
@@ -130,7 +130,7 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
           if(units == 1)
             "1 meter"
           else
-            df.format(units)+" meters"
+            units.toInt+" meters"
         } else
           df.format(units/1000)+" kilometers"
     }
@@ -294,7 +294,7 @@ trait PointOfInterest extends RelativePosition {
 
   val name:String
 
-  val classification:Option[String]
+  val classification:List[String]
 
 }
 
