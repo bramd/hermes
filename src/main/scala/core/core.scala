@@ -122,9 +122,11 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
             "1 foot"
           else
             units.toInt+" feet"
-        } else {
-          df.format(units/5280)+" miles"
-        }
+        } else
+          if(units == 5280)
+            "1 mile"
+          else
+            df.format(units/5280)+" miles"
       case Metric =>
         if(units < 1000 && !standardized) {
           if(units == 1)
@@ -132,7 +134,10 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
           else
             units.toInt+" meters"
         } else
-          df.format(units/1000)+" kilometers"
+          if(units == 1000)
+            "1 kilometer"
+          else
+            df.format(units/1000)+" kilometers"
     }
   }
 
