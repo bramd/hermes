@@ -163,7 +163,7 @@ case class AndroidPointOfInterest(val perspective:Perspective, val name:String, 
 
 class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
 
-  def nearestPoints(limit:Int = 10, skip:Int = 0) = {
+  def nearestPoints(searchRadius:Distance = 2 miles, limit:Int = 10, skip:Int = 0) = {
     var rv = List[PointOfInterest]()
     db.map(_.exec(
       """select *,
@@ -174,7 +174,7 @@ class AndroidPerspective(db:List[Database], val lat:Double, val lon:Double, val 
         select rowid from SpatialIndex
         where f_table_name = 'points'
         and f_geometry_column = 'geometry'
-        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", 0.02))
+        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
       order by distance limit """+limit,
       { row:Map[String, String] =>
         val cls = row.get("type").map { t =>

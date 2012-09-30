@@ -337,7 +337,7 @@ trait Perspective extends Position {
     }.orElse(candidates.headOption)
   }
 
-  def nearestPoints(limit:Int = 10, skip:Int = 0):List[PointOfInterest]
+  def nearestPoints(searchRadius:Distance = 2 miles, limit:Int = 10, skip:Int = 0):List[PointOfInterest]
 
   def bearingTo(p:Position) = direction.map(_ & courseTo(p))
 
