@@ -2,6 +2,7 @@ package info.hermesnav.android
 
 import java.io.File
 
+import actors.Actor.actor
 import collection.mutable.ListBuffer
 
 import android.app._
@@ -105,8 +106,12 @@ class HermesService extends Service {
 
   private val providerStatuses:collection.mutable.Map[String, Int] = collection.mutable.Map.empty
 
+  private val handler = new Handler()
+
   private def sendMessage(msg:String) {
-    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+    handler.post {
+      Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+    }
     startForeground(1, getNotification(msg))
   }
 
@@ -262,28 +267,23 @@ class HermesService extends Service {
       if(processing)
         return
       processing = true
-      val start = System.currentTimeMillis
-      val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
-      val created = System.currentTimeMillis
-      Log.d("hermescheck12", "Creation time: "+(created-start))
-      val np = p.nearestPath
-      val nearestPath = System.currentTimeMillis
-      Log.d("hermescheck12", "Nearest path: "+(nearestPath-created))
-      if(np != lastNearestPath)
-        nearestPathChanged(np)
-      lastNearestPath = np
-      val ni = p.nearestIntersection
-      val nearestIntersection = System.currentTimeMillis
-      Log.d("hermescheck12", "Nearest intersection: "+(nearestIntersection-nearestPath))
-      if(ni != lastNearestIntersection)
-        nearestIntersectionChanged(ni)
-      lastNearestIntersection = ni
-      val points = p.nearestPoints()
-      val pointsTime = System.currentTimeMillis
-      Log.d("hermescheck12", "Points: "+(pointsTime-nearestIntersection))
-      nearestPoints(points)
-      previousPerspective = Some(p)
-      processing = false
+      actor {
+        Looper.prepare()
+        val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+        val np = p.nearestPath
+        val nearestPath = System.currentTimeMillis
+        if(np != lastNearestPath)
+          nearestPathChanged(np)
+        lastNearestPath = np
+        val ni = p.nearestIntersection
+        if(ni != lastNearestIntersection)
+          nearestIntersectionChanged(ni)
+        lastNearestIntersection = ni
+        val points = p.nearestPoints()
+        nearestPoints(points)
+        previousPerspective = Some(p)
+        processing = false
+      }
     }
 
     def onProviderDisabled(provider:String) {

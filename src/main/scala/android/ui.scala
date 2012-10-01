@@ -15,46 +15,60 @@ class Hermes extends Activity with ServiceConnection {
 
   private def updateNearestPath(np:Option[Path]) {
     val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
-    v.setText(np.map { p =>
-      getString(R.string.nearestPath, p.name)
-    }.getOrElse(""))
+    runOnUiThread {
+      v.setText(np.map { p =>
+        getString(R.string.nearestPath, p.name)
+      }.getOrElse(""))
+    }
   }
 
   private def updateNearestIntersection(ni:Option[IntersectionPosition]) {
     val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
-    v.setText(ni.map(_.name).getOrElse(""))
+    runOnUiThread {
+      v.setText(ni.map(_.name).getOrElse(""))
+    }
   }
 
   private def updateDirection(dir:Option[Direction]) {
     val v = findViewById(R.id.direction).asInstanceOf[TextView]
-    v.setText(dir.map { d =>
-      d.toString
-    }.getOrElse(""))
+    runOnUiThread {
+      v.setText(dir.map { d =>
+        d.toString
+      }.getOrElse(""))
+    }
   }
 
   private def updateSpeed(spd:Option[Speed]) {
     val v = findViewById(R.id.speed).asInstanceOf[TextView]
-    v.setText(spd.map { s =>
-      s.toString
-    }.getOrElse(""))
+    runOnUiThread {
+      v.setText(spd.map { s =>
+        s.toString
+      }.getOrElse(""))
+    }
   }
 
   private def updateAccuracy(acc:Option[Distance]) {
     val v = findViewById(R.id.accuracy).asInstanceOf[TextView]
-    v.setText(acc.map { a =>
-      a.toString
-    }.getOrElse(""))
+    runOnUiThread {
+      v.setText(acc.map { a =>
+        a.toString
+      }.getOrElse(""))
+    }
   }
 
   private def updateProvider(p:Option[String]) {
     val v = findViewById(R.id.provider).asInstanceOf[TextView]
-    v.setText(p.getOrElse(""))
+    runOnUiThread {
+      v.setText(p.getOrElse(""))
+    }
   }
 
   private def updateNearestPoints(points:List[PointOfInterest]) {
     val list = findViewById(R.id.points).asInstanceOf[ListView]
     val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)
-    list.setAdapter(adapter)
+    runOnUiThread {
+      list.setAdapter(adapter)
+    }
   }
 
   override def onCreate(bundle:Bundle) {
