@@ -14,7 +14,7 @@ import android.widget._
 import jsqlite._
 
 import info.hermesnav.core._
-import model.AndroidPerspective
+import model.{AndroidMap, AndroidPerspective}
 
 class HermesService extends Service {
 
@@ -33,37 +33,43 @@ class HermesService extends Service {
 
   private lazy val fineUpdater = new LocationUpdater(None, coarseUpdater :: Nil)
 
-  private var database:Option[Database] = None
+  private var maps = List[AndroidMap]()
 
-  private def loadDatabase() {
+  private def loadMap() {
     val dir = getExternalFilesDir(null)
     dir.mkdir()
-    val db = new Database()
+    val features = new Database()
+    val graph = new Database()
     try {
-      val dbFile = new File(dir, "map.db")
-      if(!dbFile.exists)
-        dbFile.createNewFile()
-      db.open(dbFile.toString, Constants.SQLITE_OPEN_READWRITE)
-      database = Some(db)
+      val featuresFile = new File(dir, "features.db")
+      if(!featuresFile.exists)
+        featuresFile.createNewFile()
+      features.open(featuresFile.toString, Constants.SQLITE_OPEN_READONLY)
+      val graphFile = new File(dir, "graph.db")
+      if(!graphFile.exists)
+        graphFile.createNewFile()
+      graph.open(graphFile.toString, Constants.SQLITE_OPEN_READONLY)
+      maps = List(AndroidMap(features, graph))
       sendMessage(getString(R.string.mapLoaded))
     } catch {
       case e =>
-        Log.d("hermes", "Error opening database", e)
-        database = None
+        Log.d("hermes", "Error opening map", e)
+        maps = Nil
     }
   }
 
   override def onCreate {
-    super.onCreate
+    super.onCreate()
+    Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
-    loadDatabase()
+    loadMap()
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
   }
 
   override def onDestroy() {
     super.onDestroy()
-    database.foreach(_.close())
+    maps.foreach(_.close())
     setLocationEnabled(false)
     notificationManager.cancelAll
   }
@@ -249,27 +255,34 @@ class HermesService extends Service {
       if(acc != lastAccuracy)
         accuracyChanged(acc)
       lastAccuracy = acc
-      val p = Option(loc.getProvider)
-      if(p != lastProvider)
-        providerChanged(p)
-      lastProvider = p
+      val provider = Option(loc.getProvider)
+      if(provider != lastProvider)
+        providerChanged(provider)
+      lastProvider = provider
       if(processing)
         return
       processing = true
-      database.map { db =>
-        val p = new AndroidPerspective(List(db), loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
-        val np = p.nearestPath
-        if(np != lastNearestPath)
-          nearestPathChanged(np)
-        lastNearestPath = np
-        val ni = p.nearestIntersection
-        if(ni != lastNearestIntersection)
-          nearestIntersectionChanged(ni)
-        lastNearestIntersection = ni
-        val points = p.nearestPoints()
-        nearestPoints(points)
-        previousPerspective = Some(p)
-      }
+      val start = System.currentTimeMillis
+      val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+      val created = System.currentTimeMillis
+      Log.d("hermescheck12", "Creation time: "+(created-start))
+      val np = p.nearestPath
+      val nearestPath = System.currentTimeMillis
+      Log.d("hermescheck12", "Nearest path: "+(nearestPath-created))
+      if(np != lastNearestPath)
+        nearestPathChanged(np)
+      lastNearestPath = np
+      val ni = p.nearestIntersection
+      val nearestIntersection = System.currentTimeMillis
+      Log.d("hermescheck12", "Nearest intersection: "+(nearestIntersection-nearestPath))
+      if(ni != lastNearestIntersection)
+        nearestIntersectionChanged(ni)
+      lastNearestIntersection = ni
+      val points = p.nearestPoints()
+      val pointsTime = System.currentTimeMillis
+      Log.d("hermescheck12", "Points: "+(pointsTime-nearestIntersection))
+      nearestPoints(points)
+      previousPerspective = Some(p)
       processing = false
     }
 

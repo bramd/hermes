@@ -299,7 +299,7 @@ trait PointOfInterest extends RelativePosition {
 
   val name:String
 
-  val classification:List[String]
+  val classification:Map[String, String]
 
 }
 
@@ -322,19 +322,14 @@ trait Perspective extends Position {
 
   protected var previous:Option[Perspective]
 
-  protected def nearestIntersectionDistance = 40 meters
+  protected val nearestIntersectionDistance = 40 meters
 
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
-    Log.d("hermescheck", "All: "+nearestIntersectionCandidates)
-    val distance = (30 meters)
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.includes_?(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
-    .filter { c =>
-      c.distanceTo(this) <= distance
-    }
     candidates.find { c =>
       bearingTo(c).map { b =>
         List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
@@ -342,7 +337,9 @@ trait Perspective extends Position {
     }.orElse(candidates.headOption)
   }
 
-  def nearestPoints(searchRadius:Distance = 2 miles, limit:Int = 10, skip:Int = 0):List[PointOfInterest]
+  protected def defaultPointSearchRadius = 2 kilometers
+
+  def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0):List[PointOfInterest]
 
   def bearingTo(p:Position) = direction.map(_ & courseTo(p))
 
