@@ -347,7 +347,10 @@ trait Perspective extends Position {
       false
   }.getOrElse(false)
 
-  protected val nearestIntersectionDistance = 30 meters
+  protected val nearestIntersectionDistance = if(vehicular)
+    100 meters
+  else
+    30 meters
 
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
