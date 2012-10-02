@@ -165,7 +165,7 @@ object Hour extends Time
 object Minute extends Time
 object Second extends Time
 
-case class Speed(distance:Distance, time:Time = Hour) {
+case class Speed(distance:Distance, time:Time = Hour) extends Ordered[Speed] {
 
   override val toString = distance.copy(standardized = true)+" per "+(time match {
     case Second => "second"
@@ -192,6 +192,13 @@ case class Speed(distance:Distance, time:Time = Hour) {
       case Hour => this
     }
   }
+
+  def compare(other:Speed) = {
+    val me = to(Metric).to(seconds)
+    val them = other.to(Metric).to(seconds)
+    me.distance.compare(them.distance)
+  }
+
 
 }
 
@@ -321,6 +328,24 @@ trait Perspective extends Position {
   val timestamp:Long
 
   protected var previous:Option[Perspective]
+
+  private val vehicularModeThreshold = 15 kph
+
+  private val lastSpeedDrop:Option[Long] = {
+    if(speed >= vehicularModeThreshold) None else previous.flatMap { p =>
+      if(p.speed >= vehicularModeThreshold) Some(System.currentTimeMillis)
+      else p.lastSpeedDrop
+    }
+  }
+
+  val vehicular = if(speed > vehicularModeThreshold)
+    true
+  else lastSpeedDrop.map { l =>
+    if(System.currentTimeMillis-l <= 60000)
+      true
+    else
+      false
+  }.getOrElse(false)
 
   protected val nearestIntersectionDistance = 30 meters
 
