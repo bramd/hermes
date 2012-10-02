@@ -201,6 +201,19 @@ class HermesService extends Service {
 
   private var pingedIntersections = Map[IntersectionPosition, Long]()
 
+  private var points = List[PointOfInterest]()
+
+  private val nearestPointsHandlers = ListBuffer[(List[PointOfInterest]) => Unit]()
+
+  def onNearestPoints(f:(List[PointOfInterest]) => Unit) = {
+    f(points)
+    nearestPointsHandlers += f
+  }
+
+  def nearestPoints(v:List[PointOfInterest]) = nearestPointsHandlers.foreach(_(v))
+
+  def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
+
   onNearestIntersectionChanged { intersection =>
     pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 30000)
     intersection.foreach { i =>
@@ -210,15 +223,6 @@ class HermesService extends Service {
       pingedIntersections += (i -> System.currentTimeMillis)
     }
   }
-
-  private val nearestPointsHandlers = ListBuffer[(List[PointOfInterest]) => Unit]()
-
-  def onNearestPoints(f:(List[PointOfInterest]) => Unit) =
-    nearestPointsHandlers += f
-
-  def nearestPoints(v:List[PointOfInterest]) = nearestPointsHandlers.foreach(_(v))
-
-  def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
 
   private var previousPerspective:Option[Perspective] = None
 
@@ -279,7 +283,7 @@ class HermesService extends Service {
         if(ni != lastNearestIntersection)
           nearestIntersectionChanged(ni)
         lastNearestIntersection = ni
-        val points = p.nearestPoints()
+        points = p.nearestPoints()
         nearestPoints(points)
         previousPerspective = Some(p)
         processing = false
