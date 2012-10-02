@@ -322,7 +322,7 @@ trait Perspective extends Position {
 
   protected var previous:Option[Perspective]
 
-  protected val nearestIntersectionDistance = 40 meters
+  protected val nearestIntersectionDistance = 30 meters
 
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
