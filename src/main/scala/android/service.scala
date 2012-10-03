@@ -218,7 +218,15 @@ class HermesService extends Service {
     pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 30000)
     intersection.foreach { i =>
       pingedIntersections.get(i).getOrElse {
-        sendMessage(i.name)
+        val perspective = i.perspective
+        if(perspective.vehicular) {
+          val perspective = i.perspective
+          val paths = perspective.nearestPath.map { np =>
+            i.pathsExcept(np)
+          }.getOrElse(i.paths)
+          sendMessage(paths.map(_.name).mkString(", "))
+        } else
+          sendMessage(i.name)
       }
       pingedIntersections += (i -> System.currentTimeMillis)
     }
