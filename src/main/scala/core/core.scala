@@ -318,9 +318,11 @@ trait Perspective extends Position {
 
   val nearestPath:Option[Path]
 
+  private val newPathThreshold = if(vehicular) 50 meters else 30 meters
+
   protected def calcNearestPath:Option[Path] =
     previous.flatMap(_.nearestIntersection)
-    .find(i => distanceTo(i).to(Metric) <= (30 meters))
+    .find(i => distanceTo(i).to(Metric) <= (newPathThreshold))
     .flatMap(v => previous.get.nearestPath)
 
   val speed:Speed
@@ -338,7 +340,7 @@ trait Perspective extends Position {
     }
   }
 
-  val vehicular = if(speed > vehicularModeThreshold)
+  val vehicular = if(speed >= vehicularModeThreshold)
     true
   else lastSpeedDrop.map { l =>
     if(System.currentTimeMillis-l <= 60000)
