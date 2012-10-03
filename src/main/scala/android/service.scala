@@ -108,11 +108,12 @@ class HermesService extends Service {
 
   private val handler = new Handler()
 
-  private def sendMessage(msg:String) {
+  private def sendMessage(msg:String, persistent:Boolean = false) {
     handler.post {
       Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
     }
-    startForeground(1, getNotification(msg))
+    if(persistent)
+      startForeground(1, getNotification(msg))
   }
 
   private var lastDirection:Option[Direction] = None
@@ -182,7 +183,7 @@ class HermesService extends Service {
 
   onNearestPathChanged { path =>
     path.foreach { p =>
-      sendMessage(getString(R.string.nearestPath, p.name))
+      sendMessage(getString(R.string.nearestPath, p.name), true)
     }
   }
 
