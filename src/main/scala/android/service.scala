@@ -225,7 +225,7 @@ class HermesService extends Service {
           val paths = perspective.nearestPath.map { np =>
             i.pathsExcept(np)
           }.getOrElse(i.paths)
-          sendMessage(paths.map(_.name).mkString(", "))
+          sendMessage(toSentence(paths.map(_.name)))
         } else
           sendMessage(i.name)
       }

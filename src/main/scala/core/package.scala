@@ -33,4 +33,14 @@ package object core {
   val metric = Metric
   val imperial = Imperial
 
+  def toSentence(clauses:List[String]) = {
+    def iter(l:List[String]):String = l match {
+      case Nil => ""
+      case hd :: Nil => hd
+      case hd :: tl if(tl.size == 1) => hd+" and "+iter(tl)
+      case hd :: tl => hd+", "+iter(tl)
+    }
+    iter(clauses)
+  }
+
 }
