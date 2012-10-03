@@ -53,9 +53,8 @@ case class AndroidPath(map:AndroidMap, ids:List[Int], val name:String, val class
   def crosses_?(other:Position) = {
     var rv = false
     Log.d("hermescheck40", "Checking "+name)
-    Log.d("hermescheck40", "select crosses(geomFromText('"+geom+"'), BuildCircleMBR("+other.lon+", "+other.lat+", 0.001)) as crosses")
     map.features.exec(
-      "select crosses(geomFromText('"+geom+"'), BuildCircleMBR("+other.lon+", "+other.lat+", 0.001)) as crosses",
+      "select Crosses(geomFromText('"+geom+"'), ST_Buffer(MakePoint("+other.lon+", "+other.lat+"), 0.0001)) as crosses",
       { row:Map[String, String] =>
         Log.d("hermescheck40", "Got "+row)
         if(row("crosses").toInt == 1)
