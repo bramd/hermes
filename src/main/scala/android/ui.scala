@@ -26,7 +26,7 @@ class Hermes extends Activity with ServiceConnection {
     val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(ni.map { i =>
-        i.name+": "+i.perspective.distanceTo(i)+" "+i.perspective.bearingTo(i)
+        i.name+": "+i.perspective.distanceTo(i)+i.perspective.bearingTo(i).map(" "+_).getOrElse("")
       }.getOrElse(""))
     }
   }
