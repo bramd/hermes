@@ -316,13 +316,16 @@ trait Perspective extends Position {
 
   val nearestPath:Option[Path]
 
-  private val newPathThreshold = 30 meters
+  private val newPathThreshold = if(vehicular)
+    50 meters
+  else
+    30 meters
 
   protected def calcNearestPath:Option[Path] =
     for(
       p <- previous;
       pnp <- p.nearestPath;
-      ni <- nearestIntersection.filter { i =>
+      ni <- nearestIntersectionCandidates.find { i =>
         distanceTo(i) <= (newPathThreshold) &&
         i.includes_?(pnp)
       }
@@ -353,7 +356,7 @@ trait Perspective extends Position {
   }.getOrElse(false)
 
   protected val nearestIntersectionDistance = if(vehicular)
-    100 meters
+    150 meters
   else
     30 meters
 
