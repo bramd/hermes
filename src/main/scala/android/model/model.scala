@@ -67,13 +67,18 @@ case class AndroidPath(map:AndroidMap, ids:List[Int], val name:String, val class
 
 }
 
-object AndroidPath {
+trait PathNamer {
+  def namePath(row:Map[String, String]):String =
+    row.get("name").orElse(row.get("highway")).getOrElse("")
+}
+
+object AndroidPath extends PathNamer {
   def apply(map:AndroidMap, id:Int):Option[AndroidPath] = {
     var rv:Option[AndroidPath] = None
     map.features.exec(
       "select name, highway, asWKT(GEOMETRY) as geom from lines where osm_id = "+id+" limit 1",
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(map, List(id), row.get("name").orElse(row.get("highway")).getOrElse(""), row.get("highway"), row("geom")))
+        rv = Some(new AndroidPath(map, List(id), namePath(row), row.get("highway"), row("geom")))
         false
       }
     )
@@ -160,7 +165,7 @@ case class AndroidPointOfInterest(val perspective:Perspective, val name:String, 
   override val toString = name+": "+distanceTo(perspective)+perspective.bearingTo(this).map(" "+_).getOrElse("")
 }
 
-class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective {
+class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective with PathNamer {
 
   def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0) = {
     var rv = List[PointOfInterest]()
@@ -241,7 +246,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(m, List(row("osm_id").toInt), row.get("name").getOrElse(""), row.get("sub_type"), row("geom")))
+            rv = Some(AndroidPath(m, List(row("osm_id").toInt), namePath(row), row.get("sub_type"), row("geom")))
             false
           }
         )
