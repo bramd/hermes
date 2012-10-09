@@ -110,7 +110,7 @@ class HermesService extends Service {
 
   private def sendMessage(msg:String, persistent:Boolean = false) {
     handler.post {
-      Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+      Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
     if(persistent)
       startForeground(1, getNotification(msg))
