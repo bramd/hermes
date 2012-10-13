@@ -36,7 +36,7 @@ case class AndroidMap(val features:Database, val graph:Database) {
   }
 }
 
-case class AndroidPath(map:AndroidMap, ids:List[Int], val name:String, val classification:Option[String], geom:String) extends Path {
+case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Option[String], geom:String) extends Path {
 
   private[model] def joinWith(other:AndroidPath) = {
     var rv:AndroidPath = null
@@ -68,8 +68,8 @@ case class AndroidPath(map:AndroidMap, ids:List[Int], val name:String, val class
 }
 
 trait PathNamer {
-  def namePath(row:Map[String, String]):String =
-    row.get("name").orElse(row.get("highway")).getOrElse("")
+  def namePath(row:Map[String, String]) =
+    row.get("name")
 }
 
 object AndroidPath extends PathNamer {
@@ -86,7 +86,7 @@ object AndroidPath extends PathNamer {
   }
 }
 
-class AndroidIntersectionPosition(map:AndroidMap, id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition {
+class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition with PathNamer {
 
   lazy val paths = {
     var rv = List[AndroidPath]()
@@ -94,9 +94,11 @@ class AndroidIntersectionPosition(map:AndroidMap, id:Int, val perspective:Perspe
       "select osm_id, name, class, asWKT(geometry) as geom from paths where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
         val path = AndroidPath(map, row("osm_id").toInt).getOrElse {
-          new AndroidPath(map, List(row("osm_id").toInt), row.get("name").orElse(row.get("class")).getOrElse(""), row.get("class"), row("geom"))
+          new AndroidPath(map, List(row("osm_id").toInt), namePath(row), row.get("class"), row("geom"))
         }
-        rv.find(_.name == path.name).headOption.map { same =>
+        rv.find { v =>
+          v.name != None && v.name == path.name
+        }.headOption.map { same =>
           rv = rv.filterNot(_ == same)
           rv ::= same.joinWith(path)
         }.getOrElse {
@@ -138,10 +140,11 @@ class AndroidIntersectionPosition(map:AndroidMap, id:Int, val perspective:Perspe
     }.filterNot(_ == None).map(_.get)
   }
 
-  override def hashCode = map.features.hashCode+map.graph.hashCode+id.hashCode
+  override def hashCode =
+    41*41*41+map.features.hashCode+map.graph.hashCode+id.hashCode
 
   override def equals(o:Any) = o match {
-    case i:AndroidIntersectionPosition if(i.hashCode == hashCode) => true
+    case i:AndroidIntersectionPosition if(map == i.map && id == i.id) => true
     case _ => false
   }
 

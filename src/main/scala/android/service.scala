@@ -59,6 +59,8 @@ class HermesService extends Service {
     }
   }
 
+  private var initialized = false
+
   override def onCreate {
     super.onCreate()
     Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
@@ -66,13 +68,16 @@ class HermesService extends Service {
     loadMap()
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
+    initialized = true
   }
 
   override def onDestroy() {
     super.onDestroy()
     maps.foreach(_.close())
     setLocationEnabled(false)
-    notificationManager.cancelAll
+    stopForeground(true)
+    notificationManager.cancelAll()
+    initialized = false
   }
 
   class LocalBinder extends Binder {
@@ -108,12 +113,14 @@ class HermesService extends Service {
 
   private val handler = new Handler()
 
-  private def sendMessage(msg:String, persistent:Boolean = false) {
-    handler.post {
-      Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+  private def sendMessage(msg:String, persistent:Boolean = false) = {
+    if(initialized) {
+      handler.post {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+      }
+      if(persistent)
+        startForeground(1, getNotification(msg))
     }
-    if(persistent)
-      startForeground(1, getNotification(msg))
   }
 
   private var lastDirection:Option[Direction] = None
@@ -182,8 +189,19 @@ class HermesService extends Service {
   def removeNearestPathChangedHandler(f:(Option[Path]) => Unit) = nearestPathChangedHandlers -= f
 
   onNearestPathChanged { path =>
-    path.foreach { p =>
-      sendMessage(getString(R.string.nearestPath, p.name), true)
+    path.map { p =>
+      lazy val msg = getString(R.string.nearestPath, p.name.getOrElse(p.toString))
+      if(lastNearestPath == None || p.name == None)
+        sendMessage(msg, true)
+      else {
+        lastNearestPath.foreach { l =>
+          if(l.name != p.name)
+            sendMessage(msg, true)
+        }
+        true
+      }
+    }.getOrElse {
+      sendMessage("Off-road", true)
     }
   }
 
@@ -225,7 +243,7 @@ class HermesService extends Service {
           val paths = perspective.nearestPath.map { np =>
             i.pathsExcept(np)
           }.getOrElse(i.paths)
-          sendMessage(toSentence(paths.map(_.name)))
+          sendMessage(toSentence(paths.map(_.toString)))
         } else
           sendMessage(i.name)
       }

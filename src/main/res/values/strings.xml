@@ -3,7 +3,10 @@
   <string name="app_name">Hermes</string>
 
   <string name="accuracy">Accuracy</string>
+
   <string name="nearestPath">On %1$s</string>
+  <string name="unnamed">Unnamed</string>
+  <string name="offRoad">Off-road</string>
 
   <string name="exit">Exit</string>
 

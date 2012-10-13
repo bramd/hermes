@@ -246,13 +246,13 @@ trait RelativePosition extends Position {
 
 trait Path {
 
-  val name:String
+  val name:Option[String]
 
   val classification:Option[String]
 
   def crosses_?(other:Position):Boolean
 
-  override val toString = name
+  override val toString = name.orElse(classification).getOrElse("Unnamed")
 
 }
 
@@ -285,12 +285,12 @@ trait IntersectionPosition extends RelativePosition {
         val first = myPaths.head
         val second = myPaths.reverse.head
         Log.d("hermescheck40", "Cross check: "+paths.mkString(", "))
-        first.name+" "+(if(first.crosses_?(this))
+        first.toString+" "+(if(first.crosses_?(this))
           "crossing"
         else
           "and"
-        )+" "+second.name
-      case _ => toSentence(myPaths.map(_.name))
+        )+" "+second
+      case _ => toSentence(myPaths.map(_.toString))
     }
 
     countWays+": "+pathsToSentence
