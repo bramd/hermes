@@ -366,6 +366,7 @@ trait Perspective extends Position {
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.includes_?(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
+    .filter(distanceTo(_) <= nearestIntersectionDistance)
     candidates.find { c =>
       bearingTo(c).map { b =>
         List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
