@@ -249,7 +249,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(m, List(row("osm_id").toInt), namePath(row), row.get("sub_type"), row("geom")))
+            rv = Some(AndroidPath(m, List(row("osm_id").toInt), namePath(row), row.get("highway"), row("geom")))
             false
           }
         )
