@@ -36,7 +36,7 @@ case class AndroidMap(val features:Database, val graph:Database) {
   }
 }
 
-case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Option[String], geom:String) extends Path {
+case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Option[String], geom:String) extends Path with PathNamer {
 
   private[model] def joinWith(other:AndroidPath) = {
     var rv:AndroidPath = null
@@ -65,10 +65,20 @@ case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], v
     rv
   }
 
+  override val toString =
+    name
+    .orElse(classification.map(humanizeUnderscoredString(_)))
+    .getOrElse("Unnamed")
+
 }
 
-trait PathNamer {
-  def namePath(row:Map[String, String]) =
+trait Namer {
+  protected def humanizeUnderscoredString(str:String) =
+    str.replace("_", " ")
+}
+
+trait PathNamer extends Namer {
+  protected def namePath(row:Map[String, String]) =
     row.get("name")
 }
 
