@@ -367,11 +367,12 @@ trait Perspective extends Position {
       nearestIntersectionCandidates.filter(_.includes_?(np))
     }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
     .filter(distanceTo(_) <= nearestIntersectionDistance)
-    candidates.find { c =>
+    candidates.find(distanceTo(_) <= (30 meters))
+    .orElse(candidates.find { c =>
       bearingTo(c).map { b =>
         List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
       }.getOrElse(false)
-    }.orElse(candidates.headOption)
+    }).orElse(candidates.headOption)
   }
 
   protected def defaultPointSearchRadius = 2 kilometers
