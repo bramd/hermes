@@ -242,7 +242,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
         }
       )
     }
-    rv
+    rv.sortBy(distanceTo(_))
   }
 
   val nearestPath:Option[Path] = {
