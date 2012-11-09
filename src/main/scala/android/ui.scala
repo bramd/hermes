@@ -76,7 +76,9 @@ class Hermes extends Activity with ServiceConnection {
   override def onCreate(bundle:Bundle) {
     super.onCreate(bundle)
     setContentView(R.layout.info)
-    bindService(new Intent(this, classOf[HermesService]), this, Context.BIND_AUTO_CREATE)
+    val serviceIntent = new Intent(this, classOf[HermesService])
+    startService(serviceIntent)
+    bindService(serviceIntent, this, Context.BIND_AUTO_CREATE)
   }
 
   override def onDestroy() {
@@ -90,6 +92,7 @@ class Hermes extends Activity with ServiceConnection {
       s.removeProviderChangedHandler(updateProvider)
       s.removeNearestPointsHandler(updateNearestPoints)
     }
+    unbindService(this)
   }
 
   def onServiceConnected(className:ComponentName, rawBinder:IBinder) {
