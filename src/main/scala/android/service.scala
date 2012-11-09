@@ -17,7 +17,7 @@ import jsqlite._
 import info.hermesnav.core._
 import model.{AndroidMap, AndroidPerspective}
 
-class HermesService extends Service {
+class HermesService extends Service with LocationListener {
 
   private lazy val locationManager:LocationManager = getSystemService(Context.LOCATION_SERVICE).asInstanceOf[LocationManager]
 
@@ -29,10 +29,6 @@ class HermesService extends Service {
       .getNotification
 
   private lazy val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
-
-  private lazy val coarseUpdater = new LocationUpdater(Some(coarseCriteria))
-
-  private lazy val fineUpdater = new LocationUpdater(None, coarseUpdater :: Nil)
 
   private var maps = List[AndroidMap]()
 
@@ -88,9 +84,6 @@ class HermesService extends Service {
 
   override def onBind(intent:Intent):IBinder = binder
 
-  private val coarseCriteria = new Criteria
-  coarseCriteria.setAccuracy(Criteria.ACCURACY_COARSE)
-
   private var locationEnabled = false
 
   def locationEnabled_? = locationEnabled
@@ -99,12 +92,16 @@ class HermesService extends Service {
     v match {
       case true if(locationEnabled) =>
       case true =>
-        coarseUpdater.enable
-        fineUpdater.enable
+        val criteria = new Criteria
+        criteria.setAccuracy(Criteria.ACCURACY_FINE)
+        criteria.setBearingAccuracy(Criteria.ACCURACY_HIGH)
+        criteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH)
+        criteria.setSpeedAccuracy(Criteria.ACCURACY_HIGH)
+        
+        val provider = Option(locationManager.getBestProvider(criteria, true)).getOrElse(LocationManager.GPS_PROVIDER)
+        locationManager.requestLocationUpdates(provider, 1000, 1f, this)
       case false if(!locationEnabled) =>
-      case false =>
-        coarseUpdater.disable
-        fineUpdater.disable
+      case false => locationManager.removeUpdates(this)
     }
     locationEnabled = v
   }
@@ -253,29 +250,20 @@ class HermesService extends Service {
 
   private var previousPerspective:Option[Perspective] = None
 
-  class LocationUpdater(criteria:Option[Criteria] = None, val preferredTo:List[LocationUpdater] = Nil) extends LocationListener {
+  private var processing = false
 
-    private var enabled = false
+  private var unprocessedLocation:Option[Location] = None
 
-    def disable() {
-      if(!enabled) return
-      locationManager.removeUpdates(this)
-      enabled = false
+  def onLocationChanged(loc:Location) {
+    val spd = Option(loc.getSpeed).map { s =>
+      Speed(Distance(s), second)
     }
-
-    def enable() {
-      if(enabled) return
-      val provider = criteria.map(locationManager.getBestProvider(_, true)).getOrElse(LocationManager.GPS_PROVIDER)
-      locationManager.requestLocationUpdates(provider, 1000, 1f, this)
-      enabled = true
-    }
-
-    private var processing = false
-
-    def onLocationChanged(loc:Location) {
-      val spd = Option(loc.getSpeed).map { s =>
-        Speed(Distance(s), second)
-      }
+    val dir = spd.flatMap { s =>
+      if(s.distance.units == 0)
+        lastDirection
+      else None
+    }.orElse(Option(loc.getBearing).map(Direction(_)))
+    if(!processing) {
       if(lastSpeed != spd)
         speedChanged(spd.map(_ to hours))
       lastSpeed = spd.map(_ to hours)
@@ -295,61 +283,58 @@ class HermesService extends Service {
       if(provider != lastProvider)
         providerChanged(provider)
       lastProvider = provider
-      if(processing)
-        return
-      processing = true
-      actor {
-        Looper.prepare()
-        val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
-        val np = p.nearestPath
-        val nearestPath = System.currentTimeMillis
-        if(np != lastNearestPath)
-          nearestPathChanged(np)
-        lastNearestPath = np
-        val ni = p.nearestIntersection
-        if(ni != lastNearestIntersection)
-          nearestIntersectionChanged(ni)
-        lastNearestIntersection = ni
-        points = p.nearestPoints()
-        nearestPoints(points)
-        previousPerspective = Some(p)
-        processing = false
+    } else {
+      unprocessedLocation = Some(loc)
+      return
+    }
+    processing = true
+    actor {
+      Option(Looper.myLooper).getOrElse(Looper.prepare())
+      val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+      val np = p.nearestPath
+      val nearestPath = System.currentTimeMillis
+      if(np != lastNearestPath)
+        nearestPathChanged(np)
+      lastNearestPath = np
+      val ni = p.nearestIntersection
+      if(ni != lastNearestIntersection)
+        nearestIntersectionChanged(ni)
+      lastNearestIntersection = ni
+      points = p.nearestPoints()
+      nearestPoints(points)
+      previousPerspective = Some(p)
+      processing = false
+      unprocessedLocation.foreach { l =>
+        unprocessedLocation = None
+        onLocationChanged(l)
       }
     }
+  }
 
-    def onProviderDisabled(provider:String) {
-      providerStatuses -= provider
-      preferredTo.foreach(_.enable())
+  def onProviderDisabled(provider:String) {
+    providerStatuses -= provider
+  }
+
+  def onProviderEnabled(provider:String) {
+    providerStatuses(provider) = 0
+  }
+
+  def onStatusChanged(provider:String, status:Int, extras:Bundle) {
+
+    def calcMsg = provider+" "+(status match {
+      case LocationProvider.OUT_OF_SERVICE => "out of service"
+      case LocationProvider.TEMPORARILY_UNAVAILABLE => "unavailable"
+      case LocationProvider.AVAILABLE => "available"
+    })
+
+    if(providerStatuses.get(provider) == None)
+      providerStatuses(provider) = LocationProvider.TEMPORARILY_UNAVAILABLE
+
+    providerStatuses.get(provider) match {
+      case Some(s) if(s == status) =>
+      case _ => sendMessage(calcMsg)
     }
-
-    def onProviderEnabled(provider:String) {
-      providerStatuses(provider) = 0
-      preferredTo.foreach(_.disable())
-    }
-
-    def onStatusChanged(provider:String, status:Int, extras:Bundle) {
-
-      def calcMsg = provider+" "+(status match {
-        case LocationProvider.OUT_OF_SERVICE => "out of service"
-        case LocationProvider.TEMPORARILY_UNAVAILABLE => "unavailable"
-        case LocationProvider.AVAILABLE => "available"
-      })
-
-      if(providerStatuses.get(provider) == None)
-        providerStatuses(provider) = LocationProvider.TEMPORARILY_UNAVAILABLE
-
-      providerStatuses.get(provider) match {
-        case Some(s) if(s == status) =>
-        case Some(s) if(status == LocationProvider.AVAILABLE) =>
-          preferredTo.foreach (_.disable)
-          sendMessage(calcMsg)
-        case _ =>
-          sendMessage(calcMsg)
-          preferredTo.foreach(_.enable)
-      }
-      providerStatuses(provider) = status
-    }
-
+    providerStatuses(provider) = status
   }
 
 }
