@@ -365,8 +365,9 @@ trait Perspective extends Position {
   lazy val nearestIntersection:Option[IntersectionPosition] = {
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.includes_?(np))
-    }.getOrElse(nearestIntersectionCandidates.sortBy(distanceTo(_)))
+    }.getOrElse(nearestIntersectionCandidates)
     .filter(distanceTo(_) <= nearestIntersectionDistance)
+    .sortBy(distanceTo(_))
     candidates.find(distanceTo(_) <= (30 meters))
     .orElse(candidates.find { c =>
       bearingTo(c).map { b =>
