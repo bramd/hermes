@@ -120,6 +120,15 @@ class HermesService extends Service with LocationListener {
     }
   }
 
+  private val perspectiveChangedHandlers = ListBuffer[(Perspective) => Unit]()
+
+  def onPerspectiveChanged(f:(Perspective) => Unit) =
+    perspectiveChangedHandlers += f
+
+  def perspectiveChanged(v:Perspective) = perspectiveChangedHandlers.foreach(_(v))
+
+  def removePerspectiveChangedHandler(f:(Perspective) => Unit) = perspectiveChangedHandlers -= f
+
   private var lastDirection:Option[Direction] = None
 
   private val directionChangedHandlers = ListBuffer[(Option[Direction]) => Unit]()
@@ -187,7 +196,7 @@ class HermesService extends Service with LocationListener {
 
   onNearestPathChanged { path =>
     path.map { p =>
-      lazy val msg = getString(R.string.nearestPath, p.name.getOrElse(p.toString))
+      lazy val msg = getString(R.string.nearestPath, p.toString)
       if(lastNearestPath == None || p.name == None)
         sendMessage(msg, true)
       else {
@@ -198,7 +207,11 @@ class HermesService extends Service with LocationListener {
         true
       }
     }.getOrElse {
-      sendMessage("Off-road", true)
+      try {
+        sendMessage(getString(R.string.offRoad), true)
+      } catch {
+        case e => Log.e("hermes", "Error sending message", e)
+      }
     }
   }
 
@@ -231,18 +244,18 @@ class HermesService extends Service with LocationListener {
   def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
 
   onNearestIntersectionChanged { intersection =>
-    pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 30000)
+    pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 60000)
     intersection.foreach { i =>
       pingedIntersections.get(i).getOrElse {
         val perspective = i.perspective
-        if(perspective.vehicular) {
-          val perspective = i.perspective
+        val msg = if(perspective.vehicular) {
           val paths = perspective.nearestPath.map { np =>
             i.pathsExcept(np)
           }.getOrElse(i.paths)
-          sendMessage(toSentence(paths.map(_.toString)))
+          toSentence(paths.map(_.toString))
         } else
-          sendMessage(i.name)
+          i.name
+        sendMessage(msg)
       }
       pingedIntersections += (i -> System.currentTimeMillis)
     }
@@ -289,10 +302,11 @@ class HermesService extends Service with LocationListener {
     }
     processing = true
     actor {
+      try {
       Option(Looper.myLooper).getOrElse(Looper.prepare())
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+      perspectiveChanged(p)
       val np = p.nearestPath
-      val nearestPath = System.currentTimeMillis
       if(np != lastNearestPath)
         nearestPathChanged(np)
       lastNearestPath = np
@@ -308,6 +322,10 @@ class HermesService extends Service with LocationListener {
         unprocessedLocation = None
         onLocationChanged(l)
       }
+      } catch {
+        case e =>
+          Log.e("hermescheck", "Error", e)
+        }
     }
   }
 

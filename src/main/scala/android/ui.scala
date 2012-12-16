@@ -22,11 +22,11 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateNearestIntersection(ni:Option[IntersectionPosition]) {
+  private def updateNearestIntersection(p:Perspective) {
     val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(ni.map { i =>
-        i.name+": "+i.perspective.distanceTo(i)+i.perspective.bearingTo(i).map(" "+_).getOrElse("")
+      v.setText(p.nearestIntersection.map { i =>
+        i.name+": "+p.distanceTo(i)+p.bearingTo(i).map(" "+_).getOrElse("")
       }.getOrElse(""))
     }
   }
@@ -85,7 +85,7 @@ class Hermes extends Activity with ServiceConnection {
     super.onDestroy()
     svc.foreach { s =>
       s.removeNearestPathChangedHandler(updateNearestPath)
-      s.removeNearestIntersectionChangedHandler(updateNearestIntersection)
+      s.removePerspectiveChangedHandler(updateNearestIntersection)
       s.removeDirectionChangedHandler(updateDirection)
       s.removeSpeedChangedHandler(updateSpeed)
       s.removeAccuracyChangedHandler(updateAccuracy)
@@ -99,7 +99,7 @@ class Hermes extends Activity with ServiceConnection {
     val s = rawBinder.asInstanceOf[HermesService#LocalBinder].getService
     svc = Some(s)
     s.onNearestPathChanged(updateNearestPath)
-    s.onNearestIntersectionChanged(updateNearestIntersection)
+    s.onPerspectiveChanged(updateNearestIntersection)
     s.onDirectionChanged(updateDirection)
     s.onSpeedChanged(updateSpeed)
     s.onAccuracyChanged(updateAccuracy)
