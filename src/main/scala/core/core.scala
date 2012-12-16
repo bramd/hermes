@@ -158,6 +158,14 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
     (v.units*math.abs(1.0/111200*math.cos(lat)))/2
   }
 
+  def +(n:Double) = copy(units+n)
+
+  def -(n:Double) = copy(units-n)
+
+  def *(n:Double) = copy(units*n)
+
+  def /(n:Double) = copy(units/n)
+
 }
 
 sealed trait Time
@@ -248,11 +256,11 @@ trait Path {
 
   val name:Option[String]
 
-  val classification:Option[String]
+  val classification:Map[String, String]
 
   def crosses_?(other:Position):Boolean
 
-  override val toString = name.orElse(classification).getOrElse("Unnamed")
+  override val toString = name.getOrElse("Unnamed")
 
 }
 
@@ -316,10 +324,7 @@ trait Perspective extends Position {
 
   val nearestPath:Option[Path]
 
-  private val newPathThreshold = if(vehicular)
-    50 meters
-  else
-    30 meters
+  private val newPathThreshold = 30 meters
 
   protected def calcNearestPath:Option[Path] =
     for(
@@ -336,6 +341,9 @@ trait Perspective extends Position {
   val timestamp:Long
 
   protected var previous:Option[Perspective]
+
+  def finish() =
+    previous.foreach(_.previous = None)
 
   private val vehicularModeThreshold = 15 kph
 
@@ -356,9 +364,9 @@ trait Perspective extends Position {
   }.getOrElse(false)
 
   protected val nearestIntersectionDistance = if(vehicular)
-    150 meters
+    200 meters
   else
-    30 meters
+    40 meters
 
   protected val nearestIntersectionCandidates:List[IntersectionPosition]
 
@@ -368,12 +376,15 @@ trait Perspective extends Position {
     }.getOrElse(nearestIntersectionCandidates)
     .filter(distanceTo(_) <= nearestIntersectionDistance)
     .sortBy(distanceTo(_))
-    candidates.find(distanceTo(_) <= (30 meters))
-    .orElse(candidates.find { c =>
-      bearingTo(c).map { b =>
-        List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
-      }.getOrElse(false)
-    }).orElse(candidates.headOption)
+    previous.flatMap(_.nearestIntersection).find { ni =>
+      distanceTo(ni) <= (20 meters)
+    }.orElse {
+      candidates.find { c =>
+        bearingTo(c).map { b =>
+          List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
+        }.getOrElse(false)
+      }
+    }.orElse(candidates.headOption)
   }
 
   protected def defaultPointSearchRadius = 2 kilometers

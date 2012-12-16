@@ -23,7 +23,7 @@ private[model] class CB(cb:Map[String, String] => Boolean) extends Callback {
 
   def newrow(row:Array[String]) = {
     cb(
-      columns.zip(row.toList).filter(_._2 != null).toMap
+      columns.zip(row.toList).filter(v => v._2 != null && !v._2.trim.isEmpty).toMap
     )
   }
 
@@ -36,14 +36,14 @@ case class AndroidMap(val features:Database, val graph:Database) {
   }
 }
 
-case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Option[String], geom:String) extends Path with PathNamer {
+case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Map[String, String], geom:String) extends Path with Namer {
 
   private[model] def joinWith(other:AndroidPath) = {
     var rv:AndroidPath = null
     map.features.exec(
       "select asWKT(gUnion(geomFromText('"+geom+"'), geomFromText('"+other.geom+"'))) as geom",
       { row:Map[String, String] =>
-        rv = copy(ids = (other.ids++ids).distinct, geom = row("geom"))
+        rv = copy(ids = (other.ids++ids).distinct.sorted, classification = classification++other.classification, geom = row("geom"))
         false
       }
     )
@@ -67,7 +67,12 @@ case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], v
 
   override val toString =
     name
-    .orElse(classification.map(humanizeUnderscoredString(_)))
+    .orElse(classification.get("service"))
+    .orElse(classification.get("highway"))
+    .orElse(classification.get("railway"))
+    .orElse(classification.get("waterway"))
+    .orElse(classification.get("class"))
+    .map(humanizeUnderscoredString(_))
     .getOrElse("Unnamed")
 
 }
@@ -77,18 +82,33 @@ trait Namer {
     str.replace("_", " ")
 }
 
-trait PathNamer extends Namer {
-  protected def namePath(row:Map[String, String]) =
-    row.get("name")
+trait Classifier {
+  def classify(row:Map[String, String]) = {
+    var classification = Map[String, String]()
+    def addClassification(name:String) =
+      row.get(name).foreach { v =>
+        if(!v.isEmpty)
+          classification += (name -> v)
+      }
+    List("amenity", "barrier", "class", "highway", "man_made", "name", "place", "shop")
+    .foreach(addClassification(_))
+    classification ++= row.get("other_tags").map { tags =>
+      tags.split(",")
+      .map(_.split("=>"))
+      .map(v => (v.head.trim, v.last.trim))
+      .toMap
+    }.getOrElse(Map.empty)
+    classification
+  }
 }
 
-object AndroidPath extends PathNamer {
+object AndroidPath extends Classifier {
   def apply(map:AndroidMap, id:Int):Option[AndroidPath] = {
     var rv:Option[AndroidPath] = None
     map.features.exec(
       "select name, highway, asWKT(GEOMETRY) as geom from lines where osm_id = "+id+" limit 1",
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(map, List(id), namePath(row), row.get("highway"), row("geom")))
+        rv = Some(new AndroidPath(map, List(id), row.get("name"), classify(row), row("geom")))
         false
       }
     )
@@ -96,7 +116,7 @@ object AndroidPath extends PathNamer {
   }
 }
 
-class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition with PathNamer {
+class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int, val perspective:Perspective, val lat:Double, val lon:Double) extends IntersectionPosition with Classifier {
 
   lazy val paths = {
     var rv = List[AndroidPath]()
@@ -104,7 +124,7 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
       "select osm_id, name, class, asWKT(geometry) as geom from paths where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
         val path = AndroidPath(map, row("osm_id").toInt).getOrElse {
-          new AndroidPath(map, List(row("osm_id").toInt), namePath(row), row.get("class"), row("geom"))
+          new AndroidPath(map, List(row("osm_id").toInt), row.get("name"), classify(row), row("geom"))
         }
         rv.find { v =>
           v.name != None && v.name == path.name
@@ -124,7 +144,7 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
 
   def includes_?(path:Path) = path match {
     case p:AndroidPath =>
-      val ids:List[Int] = paths.map(_.ids).flatten.distinct
+      val ids = paths.map(_.ids).flatten.distinct
       var rv = false
       p.ids.foreach { id =>
         if(ids.contains(id))
@@ -174,11 +194,15 @@ object AndroidIntersectionPosition {
   }
 }
 
-case class AndroidPointOfInterest(val perspective:Perspective, val name:String, val classification:Map[String, String], val lat:Double, val lon:Double) extends PointOfInterest {
+case class AndroidPointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double) extends PointOfInterest with Namer {
+
+  val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
+
   override val toString = name+": "+distanceTo(perspective)+perspective.bearingTo(this).map(" "+_).getOrElse("")
+
 }
 
-class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective with PathNamer {
+class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective with Classifier with Namer {
 
   def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0) = {
     var rv = List[PointOfInterest]()
@@ -186,36 +210,15 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
       """select *,
       X(Centroid(GEOMETRY)) as lon, Y(Centroid(GEOMETRY)) as lat,
       Distance(Centroid(GEOMETRY), MakePoint("""+lon+""", """+lat+""")) as distance
-      from multipolygons
+      from points
       where rowid in (
         select rowid from SpatialIndex
-        where f_table_name = 'multipolygons'
+        where f_table_name = 'points'
         and f_geometry_column = 'GEOMETRY'
         and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
       order by distance limit """+limit,
       { row:Map[String, String] =>
-        var classification = Map[String, String]()
-        def addClassification(name:String) =
-          row.get(name).foreach { v =>
-            if(!v.isEmpty)
-              classification += (name -> v)
-          }
-        List("aeroway", "amenity", "barrier", "boundary", "building", "craft", "geological", "historic", "land_area", "landuse", "leisure", "man_made", "military", "natural", "office", "place", "shop", "sport", "tourism", "type")
-        .foreach(addClassification(_))
-        row.get("name").getOrElse {
-          true
-        }
-        def multiTypeString(str:String) =
-          str.split(";").map(_.trim).mkString("/")
-        val n:String = row.get("name")
-        .orElse(row.get("amenity"))
-        .orElse(row.get("leisure").map { leisure =>
-          leisure match {
-            case "pitch" => row.get("sport").map(multiTypeString(_)+" ").getOrElse("")+"field"
-            case v => v
-          }
-        }).getOrElse("unnamed")
-        rv ::= AndroidPointOfInterest(this, n, classification, row("lat").toDouble, row("lon").toDouble)
+        rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble)
         false
       }
     ))
@@ -259,7 +262,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(m, List(row("osm_id").toInt), namePath(row), row.get("highway"), row("geom")))
+            rv = Some(AndroidPath(m, List(row("osm_id").toInt), row.get("name"), classify(row), row("geom")))
             false
           }
         )
@@ -268,6 +271,6 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
     }
   }
 
-  previous = None
+  finish()
 
 }
