@@ -138,7 +138,10 @@ class HermesService extends Service with LocationListener {
     directionChangedHandlers += f
   }
 
-  def directionChanged(v:Option[Direction]) = directionChangedHandlers.foreach(_(v))
+  def directionChanged(v:Option[Direction]) = {
+    directionChangedHandlers.foreach(_(v))
+    lastDirection = v
+  }
 
   def removeDirectionChangedHandler(f:(Option[Direction]) => Unit) = directionChangedHandlers -= f
 
@@ -151,7 +154,10 @@ class HermesService extends Service with LocationListener {
     speedChangedHandlers += f
   }
 
-  def speedChanged(v:Option[Speed]) = speedChangedHandlers.foreach(_(v))
+  def speedChanged(v:Option[Speed]) = {
+    speedChangedHandlers.foreach(_(v))
+    lastSpeed = v
+  }
 
   def removeSpeedChangedHandler(f:(Option[Speed]) => Unit) = speedChangedHandlers -= f
 
@@ -164,7 +170,10 @@ class HermesService extends Service with LocationListener {
     accuracyChangedHandlers += f
   }
 
-  def accuracyChanged(a:Option[Distance]) = accuracyChangedHandlers.foreach(_(a))
+  def accuracyChanged(a:Option[Distance]) = {
+    accuracyChangedHandlers.foreach(_(a))
+    lastAccuracy = a
+  }
 
   def removeAccuracyChangedHandler(f:(Option[Distance]) => Unit) = accuracyChangedHandlers -= f
 
@@ -177,7 +186,10 @@ class HermesService extends Service with LocationListener {
     providerChangedHandlers += f
   }
 
-  def providerChanged(v:Option[String]) = providerChangedHandlers.foreach(_(v))
+  def providerChanged(v:Option[String]) = {
+    providerChangedHandlers.foreach(_(v))
+    lastProvider = v
+  }
 
   def removeProviderChangedHandler(f:(Option[String]) => Unit) = providerChangedHandlers -= f
 
@@ -190,7 +202,10 @@ class HermesService extends Service with LocationListener {
     nearestPathChangedHandlers += f
   }
 
-  def nearestPathChanged(v:Option[Path]) = nearestPathChangedHandlers.foreach(_(v))
+  def nearestPathChanged(v:Option[Path]) = {
+    nearestPathChangedHandlers.foreach(_(v))
+    lastNearestPath = v
+  }
 
   def removeNearestPathChangedHandler(f:(Option[Path]) => Unit) = nearestPathChangedHandlers -= f
 
@@ -224,7 +239,10 @@ class HermesService extends Service with LocationListener {
     nearestIntersectionChangedHandlers += f
   }
 
-  def nearestIntersectionChanged(v:Option[IntersectionPosition]) = nearestIntersectionChangedHandlers.foreach(_(v))
+  def nearestIntersectionChanged(v:Option[IntersectionPosition]) = {
+    nearestIntersectionChangedHandlers.foreach(_(v))
+    lastNearestIntersection = v
+  }
 
   def removeNearestIntersectionChangedHandler(f:(Option[IntersectionPosition]) => Unit) = nearestIntersectionChangedHandlers -= f
 
@@ -279,7 +297,6 @@ class HermesService extends Service with LocationListener {
     if(!processing) {
       if(lastSpeed != spd)
         speedChanged(spd.map(_ to hours))
-      lastSpeed = spd.map(_ to hours)
       val dir = spd.flatMap { s =>
         if(s.distance.units == 0)
           lastDirection
@@ -287,15 +304,12 @@ class HermesService extends Service with LocationListener {
       }.orElse(Option(loc.getBearing).map(Direction(_)))
       if(dir != lastDirection)
         directionChanged(dir)
-      lastDirection = dir
       val acc = Option(loc.getAccuracy).map(Distance(_))
       if(acc != lastAccuracy)
         accuracyChanged(acc)
-      lastAccuracy = acc
       val provider = Option(loc.getProvider)
       if(provider != lastProvider)
         providerChanged(provider)
-      lastProvider = provider
     } else {
       unprocessedLocation = Some(loc)
       return
@@ -309,11 +323,9 @@ class HermesService extends Service with LocationListener {
       val np = p.nearestPath
       if(np != lastNearestPath)
         nearestPathChanged(np)
-      lastNearestPath = np
       val ni = p.nearestIntersection
       if(ni != lastNearestIntersection)
         nearestIntersectionChanged(ni)
-      lastNearestIntersection = ni
       points = p.nearestPoints()
       nearestPoints(points)
       previousPerspective = Some(p)
