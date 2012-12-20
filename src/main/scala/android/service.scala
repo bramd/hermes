@@ -244,7 +244,7 @@ class HermesService extends Service with LocationListener {
   def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
 
   onNearestIntersectionChanged { intersection =>
-    pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 60000)
+    pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 120000)
     intersection.foreach { i =>
       pingedIntersections.get(i).getOrElse {
         val perspective = i.perspective
