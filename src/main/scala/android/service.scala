@@ -99,7 +99,7 @@ class HermesService extends Service with LocationListener {
         criteria.setSpeedAccuracy(Criteria.ACCURACY_HIGH)
         
         val provider = Option(locationManager.getBestProvider(criteria, true)).getOrElse(LocationManager.GPS_PROVIDER)
-        locationManager.requestLocationUpdates(provider, 1000, 1f, this)
+        locationManager.requestLocationUpdates(provider, 0, 0, this)
       case false if(!locationEnabled) =>
       case false => locationManager.removeUpdates(this)
     }
