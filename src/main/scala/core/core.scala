@@ -118,26 +118,30 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
     system match {
       case Imperial =>
         if(units < 1056 && !standardized) {
-          if(units == 1)
+          if(units.toInt == 1)
             "1 foot"
           else
             units.toInt+" feet"
-        } else
-          if(units == 5280)
+        } else {
+          val str = df.format(math.round(units/5280))
+          if(str == "1" || units == 5280)
             "1 mile"
           else
-            df.format(units/5280)+" miles"
+            str+" miles"
+        }
       case Metric =>
         if(units < 1000 && !standardized) {
-          if(units == 1)
+          if(units.toInt == 1)
             "1 meter"
           else
             units.toInt+" meters"
-        } else
-          if(units == 1000)
+        } else {
+          val str = df.format(math.round(units/1000))
+          if(str == "1" || units == 1000)
             "1 kilometer"
           else
-            df.format(units/1000)+" kilometers"
+            str+" kilometers"
+        }
     }
   }
 
