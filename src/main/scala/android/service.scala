@@ -316,7 +316,6 @@ class HermesService extends Service with LocationListener {
     }
     processing = true
     actor {
-      try {
       Option(Looper.myLooper).getOrElse(Looper.prepare())
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
       perspectiveChanged(p)
@@ -334,10 +333,6 @@ class HermesService extends Service with LocationListener {
         unprocessedLocation = None
         onLocationChanged(l)
       }
-      } catch {
-        case e =>
-          Log.e("hermescheck", "Error", e)
-        }
     }
   }
 
