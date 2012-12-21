@@ -123,7 +123,7 @@ case class Distance(val units:Double, val system:MeasurementSystem = Metric, sta
           else
             units.toInt+" feet"
         } else {
-          val str = df.format(math.round(units/5280))
+          val str = df.format(units/5280)
           if(str == "1" || units == 5280)
             "1 mile"
           else
