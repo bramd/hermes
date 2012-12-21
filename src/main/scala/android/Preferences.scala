@@ -1,19 +1,20 @@
 package info.hermesnav.android
 
-import android.content.{Context, SharedPreferences}
-import android.net.Uri
-import android.preference.PreferenceManager
-import android.provider.Settings
+import android.content._
+import android.net._
+import android.preference._
+import android.provider._
+
+import info.hermesnav.core._
 
 object Preferences {
 
-  private var preferences:SharedPreferences = null
-
   private var context:Context = null
+
+  private lazy val preferences:SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 
   def apply(c:Context) {
     context = c
-    preferences = PreferenceManager.getDefaultSharedPreferences(context)
   }
 
   def intersectionNotificationTone = preferences.getString("intersection_notification_tone", "") match {
@@ -26,20 +27,9 @@ object Preferences {
     case v => Uri.parse(v)
   }
 
-  def pingNearest = preferences.getBoolean("ping_nearest", false)
-
-  def pingNearest_=(v:Boolean) {
-    val editor = preferences.edit()
-    editor.putBoolean("ping_nearest", v)
-    editor.commit()
-  }
-
-  def urbanMode = preferences.getBoolean("urban_mode", true)
-
-  def urbanMode_=(v:Boolean) {
-    val editor = preferences.edit()
-    editor.putBoolean("urban_mode", v)
-    editor.commit()
+  def measurementSystem = preferences.getString("measurementSystem", "metric") match {
+    case "imperial" => Imperial
+    case _ => Metric
   }
 
 }

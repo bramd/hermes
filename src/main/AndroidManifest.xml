@@ -29,7 +29,7 @@
 
     </activity>
 
-    <activity android:name=".ui.Preferences"/>
+    <activity android:name=".ui.Settings"/>
 
   </application>
 </manifest>

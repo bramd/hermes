@@ -1,0 +1,13 @@
+<resources>
+
+  <string-array name="measurementSystemNames">
+    <item>@string/imperial</item>
+    <item>@string/metric</item>
+  </string-array>
+
+  <string-array name="measurementSystemValues">
+    <item>imperial</item>
+    <item>metric</item>
+  </string-array>
+
+</resources>

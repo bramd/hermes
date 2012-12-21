@@ -4,6 +4,7 @@ package ui
 import android.app._
 import android.content._
 import android.os._
+import android.preference._
 import android.view._
 import android.widget._
 
@@ -26,7 +27,7 @@ class Hermes extends Activity with ServiceConnection {
     val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(p.nearestIntersection.map { i =>
-        i.name+": "+p.distanceTo(i)+p.bearingTo(i).map(" "+_).getOrElse("")
+        i.name+": "+p.distanceTo(i).to(Preferences.measurementSystem)+p.bearingTo(i).map(" "+_).getOrElse("")
       }.getOrElse(""))
     }
   }
@@ -44,7 +45,7 @@ class Hermes extends Activity with ServiceConnection {
     val v = findViewById(R.id.speed).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(spd.map { s =>
-        s.toString
+        s.to(Preferences.measurementSystem).toString
       }.getOrElse(""))
     }
   }
@@ -53,7 +54,7 @@ class Hermes extends Activity with ServiceConnection {
     val v = findViewById(R.id.accuracy).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(acc.map { a =>
-        a.toString
+        a.to(Preferences.measurementSystem).toString
       }.getOrElse(""))
     }
   }
@@ -122,6 +123,7 @@ class Hermes extends Activity with ServiceConnection {
 
   override def onOptionsItemSelected(item:MenuItem) = {
     item.getItemId match {
+      case R.id.settings => startActivity(new Intent(this, classOf[Settings]))
       case R.id.exit => exit()
     }
     true
@@ -132,4 +134,18 @@ class Hermes extends Activity with ServiceConnection {
     finish()
   }
 
+}
+
+class StockPreferenceFragment extends PreferenceFragment {
+  override def onCreate(bundle:Bundle) {
+    super.onCreate(bundle)
+    val res = getActivity.getResources.getIdentifier(getArguments.getString("resource"), "xml", getActivity.getPackageName)
+    addPreferencesFromResource(res)
+  }
+}
+
+class Settings extends PreferenceActivity {
+  override def onBuildHeaders(target:java.util.List[PreferenceActivity.Header]) {
+    loadHeadersFromResource(R.xml.preference_headers, target)
+  }
 }

@@ -1,0 +1,12 @@
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <ListPreference
+    android:key="measurementSystem"
+    android:title="@string/measurementSystem"
+    android:entries="@array/measurementSystemNames"
+    android:entryValues="@array/measurementSystemValues"
+    android:defaultValue="metric"
+    />
+
+</PreferenceScreen>
