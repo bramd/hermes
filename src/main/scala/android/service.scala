@@ -145,6 +145,16 @@ class HermesService extends Service with LocationListener {
 
   def removeDirectionChangedHandler(f:(Option[Direction]) => Unit) = directionChangedHandlers -= f
 
+  onDirectionChanged { (direction:Option[Direction]) =>
+    for(
+      dir <- direction;
+      lastDir <- lastDirection
+    ) {
+      if(Preferences.announceDirectionChanges_? && dir.toString != lastDir.toString)
+        sendMessage(dir.toString)
+    }
+  }
+
   private var lastSpeed:Option[Speed] = None
 
   private val speedChangedHandlers = ListBuffer[(Option[Speed]) => Unit]()

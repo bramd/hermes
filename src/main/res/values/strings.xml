@@ -17,5 +17,6 @@
   <string name="measurementSystem">Measurement system</string>
   <string name="imperial">Imperial</string>
   <string name="metric">Metric</string>
+  <string name="announceDirectionChanges">Announce direction changes</string>
 
 </resources>

@@ -32,4 +32,6 @@ object Preferences {
     case _ => Metric
   }
 
+  def announceDirectionChanges_? = preferences.getBoolean("announceDirectionChanges", false)
+
 }
