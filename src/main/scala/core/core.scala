@@ -5,7 +5,14 @@ import _root_.android.util.Log
 
 import java.text.DecimalFormat
 
-object RelativeDirection extends Enumeration {
+object CoarseRelativeDirection extends Enumeration {
+  val Ahead = Value("ahead")
+  val Left = Value("left")
+  val Behind = Value("behind")
+  val Right = Value("right")
+}
+
+object FineRelativeDirection extends Enumeration {
   val Ahead = Value("ahead")
   val AheadAndLeft = Value("ahead and left")
   val LeftAndAhead = Value("left and ahead")
@@ -94,8 +101,8 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
       North
   }
 
-  def toRelativeDirection = {
-    import RelativeDirection._
+  def toFineRelativeDirection = {
+    import FineRelativeDirection._
     if(heading < 15) Ahead
     else if(heading < 45) AheadAndRight
     else if(heading < 75) RightAndAhead
@@ -111,17 +118,18 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
     else Ahead
   }
 
-  override def toString = if(relative) toRelativeDirection.toString else toFineCardinalDirection.toString
+  override def toString = if(relative) toFineRelativeDirection.toString else toFineCardinalDirection.toString
 
-  def toRoughRelativeString = {
+  def toCoarseRelativeDirection = {
+    import CoarseRelativeDirection._
     if(heading <= 30 || heading >= 330)
-      "ahead"
+      Ahead
     else if(heading >= 150 && heading <= 210)
-      "behind"
+      Behind
     else if(heading < 150)
-      "right"
+      Right
     else
-      "left"
+      Left
   }
 
   private def normalize(v:Double):Double = v match {
@@ -415,8 +423,8 @@ trait Perspective extends Position {
     }.orElse {
       candidates.find { c =>
         bearingTo(c).map { b =>
-          import RelativeDirection._
-          List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
+          import FineRelativeDirection._
+          List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toFineRelativeDirection)
         }.getOrElse(false)
       }
     }.orElse(candidates.headOption)
