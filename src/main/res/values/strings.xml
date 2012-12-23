@@ -18,5 +18,6 @@
   <string name="imperial">Imperial</string>
   <string name="metric">Metric</string>
   <string name="announceDirectionChanges">Announce direction changes</string>
+  <string name="announceAccuracyChanges">Announce accuracy changes</string>
 
 </resources>

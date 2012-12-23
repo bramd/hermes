@@ -34,4 +34,6 @@ object Preferences {
 
   def announceDirectionChanges_? = preferences.getBoolean("announceDirectionChanges", false)
 
+  def announceAccuracyChanges_? = preferences.getBoolean("announceAccuracyChanges", false)
+
 }

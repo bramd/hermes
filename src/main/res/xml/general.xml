@@ -15,4 +15,10 @@
     android:defaultValue="false"
     />
 
+  <CheckBoxPreference
+    android:key="announceAccuracyChanges"
+    android:title="@string/announceAccuracyChanges"
+    android:defaultValue="false"
+    />
+
 </PreferenceScreen>

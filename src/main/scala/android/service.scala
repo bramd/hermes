@@ -187,6 +187,13 @@ class HermesService extends Service with LocationListener {
 
   def removeAccuracyChangedHandler(f:(Option[Distance]) => Unit) = accuracyChangedHandlers -= f
 
+  onAccuracyChanged { (accuracy:Option[Distance]) =>
+    accuracy.foreach { acc =>
+      if(Preferences.announceAccuracyChanges_? && accuracy != lastAccuracy)
+        sendMessage(acc.to(Preferences.measurementSystem).toString)
+    }
+  }
+
   private var lastProvider:Option[String] = None
 
   private val providerChangedHandlers = ListBuffer[(Option[String]) => Unit]()
