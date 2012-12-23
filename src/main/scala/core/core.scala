@@ -20,47 +20,78 @@ object RelativeDirection extends Enumeration {
   val AheadAndRight = Value("ahead and right")
 }
 
+object CoarseCardinalDirection extends Enumeration {
+  val North = Value("north")
+  val Northeast = Value("northeast")
+  val East = Value("east")
+  val Southeast = Value("southeast")
+  val South = Value("south")
+  val Southwest = Value("southwest")
+  val West = Value("west")
+  val Northwest = Value("northwest")
+}
+
+object FineCardinalDirection extends Enumeration {
+  val North = Value("north")
+  val NorthNortheast = Value("north northeast")
+  val Northeast = Value("northeast")
+  val EastNortheast = Value("east northeast")
+  val East = Value("east")
+  val EastSoutheast = Value("east southeast")
+  val Southeast = Value("southeast")
+  val SouthSoutheast = Value("south southeast")
+  val South = Value("south")
+  val SouthSouthwest = Value("south southwest")
+  val Southwest = Value("southwest")
+  val WestSouthwest = Value("west southwest")
+  val West = Value("west")
+  val WestNorthwest = Value("west northwest")
+  val Northwest = Value("northwest")
+  val NorthNorthwest = Value("north northwest")
+}
+
 case class Direction(val degrees:Double, relative:Boolean = false) {
 
   lazy val heading = normalize(degrees)
 
   def &(relative:Direction) = new Direction(normalize(relative.heading-heading), true)
 
-  def toCardinalString = {
+  def toFineCardinalDirection = {
+    import FineCardinalDirection._
     if(heading <= 11.5)
-      "north"
+      North
     else if(heading <= 34)
-      "north northeast"
+      NorthNortheast
     else if(heading <= 56.5)
-      "northeast"
+      Northeast
     else if(heading <= 79)
-      "east northeast"
+      EastNortheast
     else if(heading <= 101.5)
-      "east"
+      East
     else if(heading <= 124)
-      "east southeast"
+      EastSoutheast
     else if(heading <= 146.5)
-      "southeast"
+      Southeast
     else if(heading <= 169)
-      "south southeast"
+      SouthSoutheast
     else if(heading <= 191.5)
-      "south"
+      South
     else if(heading <= 214)
-      "south southwest"
+      SouthSouthwest
     else if(heading <= 236.5)
-      "southwest"
+      Southwest
     else if(heading <= 259)
-      "west southwest"
+      WestSouthwest
     else if(heading <= 281.5)
-      "west"
+      West
     else if(heading <= 304)
-      "west northwest"
+      WestNorthwest
     else if(heading <= 326.5)
-      "northwest"
+      Northwest
     else if(heading <= 349)
-      "north northwest"
+      NorthNorthwest
     else
-      "north"
+      North
   }
 
   def toRelativeDirection = {
@@ -80,7 +111,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
     else Ahead
   }
 
-  override def toString = if(relative) toRelativeDirection.toString else toCardinalString
+  override def toString = if(relative) toRelativeDirection.toString else toFineCardinalDirection.toString
 
   def toRoughRelativeString = {
     if(heading <= 30 || heading >= 330)
