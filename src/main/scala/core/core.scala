@@ -5,22 +5,20 @@ import _root_.android.util.Log
 
 import java.text.DecimalFormat
 
-abstract class RelativeDirection(val description:String) {
-  override val toString = description
+object RelativeDirection extends Enumeration {
+  val Ahead = Value("ahead")
+  val AheadAndLeft = Value("ahead and left")
+  val LeftAndAhead = Value("left and ahead")
+  val Left = Value("left")
+  val LeftAndBehind = Value("left and behind")
+  val BehindAndLeft = Value("behind and left")
+  val Behind = Value("behind")
+  val BehindAndRight = Value("behind and right")
+  val RightAndBehind = Value("right and behind")
+  val Right = Value("right")
+  val RightAndAhead = Value("right and ahead")
+  val AheadAndRight = Value("ahead and right")
 }
-
-case object Ahead extends RelativeDirection("ahead")
-case object AheadAndLeft extends RelativeDirection("ahead and left")
-case object LeftAndAhead extends RelativeDirection("left and ahead")
-case object Left extends RelativeDirection("left")
-case object LeftAndBehind extends RelativeDirection("left and behind")
-case object BehindAndLeft extends RelativeDirection("behind and left")
-case object Behind extends RelativeDirection("behind")
-case object BehindAndRight extends RelativeDirection("behind and right")
-case object RightAndBehind extends RelativeDirection("right and behind")
-case object Right extends RelativeDirection("right")
-case object RightAndAhead extends RelativeDirection("right and ahead")
-case object AheadAndRight extends RelativeDirection("ahead and right")
 
 case class Direction(val degrees:Double, relative:Boolean = false) {
 
@@ -66,6 +64,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
   }
 
   def toRelativeDirection = {
+    import RelativeDirection._
     if(heading < 15) Ahead
     else if(heading < 45) AheadAndRight
     else if(heading < 75) RightAndAhead
@@ -385,6 +384,7 @@ trait Perspective extends Position {
     }.orElse {
       candidates.find { c =>
         bearingTo(c).map { b =>
+          import RelativeDirection._
           List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toRelativeDirection)
         }.getOrElse(false)
       }
