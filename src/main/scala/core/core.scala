@@ -63,7 +63,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
 
   def &(relative:Direction) = new Direction(normalize(relative.heading-heading), true)
 
-  def toFineCardinalDirection = {
+  lazy val fineCardinalDirection = {
     import FineCardinalDirection._
     if(heading <= 11.5)
       North
@@ -101,7 +101,7 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
       North
   }
 
-  def toFineRelativeDirection = {
+  lazy val fineRelativeDirection = {
     import FineRelativeDirection._
     if(heading < 15) Ahead
     else if(heading < 45) AheadAndRight
@@ -118,9 +118,9 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
     else Ahead
   }
 
-  override def toString = if(relative) toFineRelativeDirection.toString else toFineCardinalDirection.toString
+  override def toString = if(relative) fineRelativeDirection.toString else fineCardinalDirection.toString
 
-  def toCoarseRelativeDirection = {
+  lazy val coarseRelativeDirection = {
     import CoarseRelativeDirection._
     if(heading <= 30 || heading >= 330)
       Ahead
@@ -424,7 +424,7 @@ trait Perspective extends Position {
       candidates.find { c =>
         bearingTo(c).map { b =>
           import FineRelativeDirection._
-          List(Ahead, AheadAndLeft, AheadAndRight).contains(b.toFineRelativeDirection)
+          List(Ahead, AheadAndLeft, AheadAndRight).contains(b.fineRelativeDirection)
         }.getOrElse(false)
       }
     }.orElse(candidates.headOption)
