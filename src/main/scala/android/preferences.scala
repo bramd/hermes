@@ -1,4 +1,5 @@
 package info.hermesnav.android
+package preferences
 
 import android.content._
 import android.net._

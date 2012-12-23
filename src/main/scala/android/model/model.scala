@@ -6,6 +6,7 @@ import android.util.Log
 import jsqlite._
 
 import info.hermesnav.core._
+import preferences._
 
 private[model] class CB(cb:Map[String, String] => Boolean) extends Callback {
 

@@ -16,6 +16,7 @@ import jsqlite._
 
 import info.hermesnav.core._
 import model.{AndroidMap, AndroidPerspective}
+import preferences._
 
 class HermesService extends Service with LocationListener {
 

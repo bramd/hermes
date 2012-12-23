@@ -9,6 +9,7 @@ import android.view._
 import android.widget._
 
 import info.hermesnav.core._
+import preferences._
 
 class Hermes extends Activity with ServiceConnection {
 
