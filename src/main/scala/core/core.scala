@@ -63,6 +63,28 @@ case class Direction(val degrees:Double, relative:Boolean = false) {
 
   def &(relative:Direction) = new Direction(normalize(relative.heading-heading), true)
 
+  lazy val coarseCardinalDirection = {
+    import CoarseCardinalDirection._
+    if(heading <= 22.5)
+      North
+    else if(heading <= 67.5)
+      Northeast
+    else if(heading <= 112.5)
+      East
+    else if(heading <= 157.5)
+      Southeast
+    else if(heading <= 202.5)
+      South
+    else if(heading <= 247.5)
+      Southwest
+    else if(heading <= 292.5)
+      West
+    else if(heading <= 337.5)
+      Northwest
+    else
+      North
+  }
+
   lazy val fineCardinalDirection = {
     import FineCardinalDirection._
     if(heading <= 11.5)

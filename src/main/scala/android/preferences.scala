@@ -8,6 +8,12 @@ import android.provider._
 
 import info.hermesnav.core._
 
+object DirectionAnnouncementPrecision extends Enumeration {
+  val Off = Value("off")
+  val Low = Value("low")
+  val High = Value("high")
+}
+
 object Preferences {
 
   private var context:Context = null
@@ -33,8 +39,10 @@ object Preferences {
     case _ => Metric
   }
 
-  def announceDirectionChanges_? = preferences.getBoolean("announceDirectionChanges", false)
+  def directionAnnouncementPrecision =
+    DirectionAnnouncementPrecision.withName(preferences.getString("directionAnnouncementPrecision", "off"))
 
-  def announceAccuracyChanges_? = preferences.getBoolean("announceAccuracyChanges", false)
+  def announceAccuracyChanges_? =
+    preferences.getBoolean("announceAccuracyChanges", false)
 
 }

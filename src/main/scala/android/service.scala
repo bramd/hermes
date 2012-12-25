@@ -151,8 +151,20 @@ class HermesService extends Service with LocationListener {
       dir <- direction;
       lastDir <- lastDirection
     ) {
-      if(Preferences.announceDirectionChanges_? && dir.toString != lastDir.toString)
-        sendMessage(dir.toString)
+      if(Preferences.directionAnnouncementPrecision != DirectionAnnouncementPrecision.Off)
+        Preferences.directionAnnouncementPrecision match {
+          case DirectionAnnouncementPrecision.Low =>
+            val ccd = dir.coarseCardinalDirection
+            val lcd = lastDir.coarseCardinalDirection
+            if(ccd.toString != lcd.toString)
+              sendMessage(ccd.toString)
+          case DirectionAnnouncementPrecision.High =>
+            val ccd = dir.fineCardinalDirection
+            val lcd = lastDir.fineCardinalDirection
+            if(ccd.toString != lcd.toString)
+              sendMessage(ccd.toString)
+          case _ =>
+        }
     }
   }
 
