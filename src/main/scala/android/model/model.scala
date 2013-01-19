@@ -1,6 +1,8 @@
 package info.hermesnav.android
 package model
 
+import collection.SortedSet
+
 import android.util.Log
 
 import jsqlite._
@@ -37,14 +39,14 @@ case class AndroidMap(val features:Database, val graph:Database) {
   }
 }
 
-case class AndroidPath(map:AndroidMap, ids:List[Int], val name:Option[String], val classification:Map[String, String], geom:String) extends Path with Namer {
+case class AndroidPath(map:AndroidMap, ids:SortedSet[Int], val name:Option[String], val classification:Map[String, String], geom:String) extends Path with Namer {
 
   private[model] def joinWith(other:AndroidPath) = {
     var rv:AndroidPath = null
     map.features.exec(
       "select asWKT(gUnion(geomFromText('"+geom+"'), geomFromText('"+other.geom+"'))) as geom",
       { row:Map[String, String] =>
-        rv = copy(ids = (other.ids++ids).distinct.sorted, classification = classification++other.classification, geom = row("geom"))
+        rv = copy(ids = (other.ids++ids), classification = classification++other.classification, geom = row("geom"))
         false
       }
     )
@@ -109,7 +111,7 @@ object AndroidPath extends Classifier {
     map.features.exec(
       "select name, highway, asWKT(GEOMETRY) as geom from lines where osm_id = "+id+" limit 1",
       { row:Map[String, String] =>
-        rv = Some(new AndroidPath(map, List(id), row.get("name"), classify(row), row("geom")))
+        rv = Some(new AndroidPath(map, SortedSet(id), row.get("name"), classify(row), row("geom")))
         false
       }
     )
@@ -125,7 +127,7 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
       "select osm_id, name, class, asWKT(geometry) as geom from paths where node_from = "+id+" or node_to = "+id,
       { row:Map[String, String] =>
         val path = AndroidPath(map, row("osm_id").toInt).getOrElse {
-          new AndroidPath(map, List(row("osm_id").toInt), row.get("name"), classify(row), row("geom"))
+          new AndroidPath(map, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom"))
         }
         rv.find { v =>
           v.name != None && v.name == path.name
@@ -273,7 +275,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(m, List(row("osm_id").toInt), row.get("name"), classify(row), row("geom")))
+            rv = Some(AndroidPath(m, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom")))
             false
           }
         )
