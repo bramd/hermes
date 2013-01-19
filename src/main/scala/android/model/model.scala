@@ -141,7 +141,17 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
     rv.distinct
   }
 
-  def pathsExcept(path:Path) = paths.filterNot(_.name == path.name)
+  def pathsExcept(path:Path) = {
+    val ids = path.asInstanceOf[AndroidPath].ids
+    paths.filter { p =>
+      var rv = true
+      ids.foreach { id =>
+        if(p.asInstanceOf[AndroidPath].ids.contains(id))
+          rv = false
+      }
+      rv
+    }
+  }
 
   def includes_?(path:Path) = path match {
     case p:AndroidPath =>
@@ -168,7 +178,7 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
     )
     ids.map { id =>
       AndroidIntersectionPosition(map, id, perspective)
-    }.filterNot(_ == None).map(_.get)
+    }.flatten
   }
 
   override def hashCode =
