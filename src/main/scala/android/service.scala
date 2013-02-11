@@ -2,8 +2,10 @@ package info.hermesnav.android
 
 import java.io.File
 
-import actors.Actor.actor
 import collection.mutable.ListBuffer
+import concurrent._
+import ExecutionContext.Implicits.global
+import language.postfixOps
 
 import android.app._
 import android.content._
@@ -50,7 +52,7 @@ class HermesService extends Service with LocationListener {
       maps = List(AndroidMap(features, graph))
       sendMessage(getString(R.string.mapLoaded))
     } catch {
-      case e =>
+      case e:Throwable =>
         Log.d("hermes", "Error opening map", e)
         maps = Nil
     }
@@ -345,7 +347,7 @@ class HermesService extends Service with LocationListener {
       return
     }
     processing = true
-    actor {
+    //future {
       Option(Looper.myLooper).getOrElse(Looper.prepare())
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
       perspectiveChanged(p)
@@ -363,7 +365,7 @@ class HermesService extends Service with LocationListener {
         unprocessedLocation = None
         onLocationChanged(l)
       }
-    }
+    //}
   }
 
   def onProviderDisabled(provider:String) {

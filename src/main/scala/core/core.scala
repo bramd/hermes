@@ -5,6 +5,8 @@ import _root_.android.util.Log
 
 import java.text.DecimalFormat
 
+import language.postfixOps
+
 object CoarseRelativeDirection extends Enumeration {
   val Ahead = Value("ahead")
   val Left = Value("left")

@@ -275,6 +275,9 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
             and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
           ) order by distance limit 1""",
           { row:Map[String, String] =>
+            Log.d("hermescheck", "Row: "+row)
+            Log.d("hermescheck", "ID: "+row("osm_id"))
+            Log.d("hermescheck", "int: "+row("osm_id").toInt)
             rv = Some(AndroidPath(m, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom")))
             false
           }
