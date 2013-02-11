@@ -5,7 +5,6 @@ import java.io.File
 import collection.mutable.ListBuffer
 import concurrent._
 import ExecutionContext.Implicits.global
-import language.postfixOps
 
 import android.app._
 import android.content._
@@ -17,6 +16,7 @@ import android.widget._
 import jsqlite._
 
 import info.hermesnav.core._
+import events._
 import model.{AndroidMap, AndroidPerspective}
 import preferences._
 
@@ -62,7 +62,7 @@ class HermesService extends Service with LocationListener {
 
   override def onCreate {
     super.onCreate()
-    Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
+    //Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
     loadMap()
     setLocationEnabled(true)
@@ -123,32 +123,9 @@ class HermesService extends Service with LocationListener {
     }
   }
 
-  private val perspectiveChangedHandlers = ListBuffer[(Perspective) => Unit]()
-
-  def onPerspectiveChanged(f:(Perspective) => Unit) =
-    perspectiveChangedHandlers += f
-
-  def perspectiveChanged(v:Perspective) = perspectiveChangedHandlers.foreach(_(v))
-
-  def removePerspectiveChangedHandler(f:(Perspective) => Unit) = perspectiveChangedHandlers -= f
-
   private var lastDirection:Option[Direction] = None
 
-  private val directionChangedHandlers = ListBuffer[(Option[Direction]) => Unit]()
-
-  def onDirectionChanged(f:(Option[Direction]) => Unit) = {
-    f(lastDirection)
-    directionChangedHandlers += f
-  }
-
-  def directionChanged(v:Option[Direction]) = {
-    directionChangedHandlers.foreach(_(v))
-    lastDirection = v
-  }
-
-  def removeDirectionChangedHandler(f:(Option[Direction]) => Unit) = directionChangedHandlers -= f
-
-  onDirectionChanged { (direction:Option[Direction]) =>
+  DirectionChanged += { (direction:Option[Direction]) =>
     for(
       dir <- direction;
       lastDir <- lastDirection
@@ -172,37 +149,9 @@ class HermesService extends Service with LocationListener {
 
   private var lastSpeed:Option[Speed] = None
 
-  private val speedChangedHandlers = ListBuffer[(Option[Speed]) => Unit]()
-
-  def onSpeedChanged(f:(Option[Speed]) => Unit) = {
-    f(lastSpeed)
-    speedChangedHandlers += f
-  }
-
-  def speedChanged(v:Option[Speed]) = {
-    speedChangedHandlers.foreach(_(v))
-    lastSpeed = v
-  }
-
-  def removeSpeedChangedHandler(f:(Option[Speed]) => Unit) = speedChangedHandlers -= f
-
   private var lastAccuracy:Option[Distance] = None
 
-  private val accuracyChangedHandlers = ListBuffer[(Option[Distance]) => Unit]()
-
-  def onAccuracyChanged(f:(Option[Distance]) => Unit) = {
-    f(lastAccuracy)
-    accuracyChangedHandlers += f
-  }
-
-  def accuracyChanged(a:Option[Distance]) = {
-    accuracyChangedHandlers.foreach(_(a))
-    lastAccuracy = a
-  }
-
-  def removeAccuracyChangedHandler(f:(Option[Distance]) => Unit) = accuracyChangedHandlers -= f
-
-  onAccuracyChanged { (accuracy:Option[Distance]) =>
+  AccuracyChanged += { (accuracy:Option[Distance]) =>
     accuracy.foreach { acc =>
       if(Preferences.announceAccuracyChanges_? && accuracy != lastAccuracy)
         sendMessage(acc.to(Preferences.measurementSystem).toString)
@@ -211,37 +160,9 @@ class HermesService extends Service with LocationListener {
 
   private var lastProvider:Option[String] = None
 
-  private val providerChangedHandlers = ListBuffer[(Option[String]) => Unit]()
-
-  def onProviderChanged(f:(Option[String]) => Unit) = {
-    f(lastProvider)
-    providerChangedHandlers += f
-  }
-
-  def providerChanged(v:Option[String]) = {
-    providerChangedHandlers.foreach(_(v))
-    lastProvider = v
-  }
-
-  def removeProviderChangedHandler(f:(Option[String]) => Unit) = providerChangedHandlers -= f
-
   private var lastNearestPath:Option[Path] = None
 
-  private val nearestPathChangedHandlers = ListBuffer[(Option[Path]) => Unit]()
-
-  def onNearestPathChanged(f:(Option[Path]) => Unit) = {
-    f(lastNearestPath)
-    nearestPathChangedHandlers += f
-  }
-
-  def nearestPathChanged(v:Option[Path]) = {
-    nearestPathChangedHandlers.foreach(_(v))
-    lastNearestPath = v
-  }
-
-  def removeNearestPathChangedHandler(f:(Option[Path]) => Unit) = nearestPathChangedHandlers -= f
-
-  onNearestPathChanged { path =>
+  NearestPathChanged += { path:Option[Path] =>
     path.map { p =>
       lazy val msg = getString(R.string.nearestPath, p.toString)
       if(lastNearestPath == None || p.name == None)
@@ -264,36 +185,11 @@ class HermesService extends Service with LocationListener {
 
   private var lastNearestIntersection:Option[IntersectionPosition] = None
 
-  private val nearestIntersectionChangedHandlers = ListBuffer[(Option[IntersectionPosition]) => Unit]()
-
-  def onNearestIntersectionChanged(f:(Option[IntersectionPosition]) => Unit) = {
-    f(lastNearestIntersection)
-    nearestIntersectionChangedHandlers += f
-  }
-
-  def nearestIntersectionChanged(v:Option[IntersectionPosition]) = {
-    nearestIntersectionChangedHandlers.foreach(_(v))
-    lastNearestIntersection = v
-  }
-
-  def removeNearestIntersectionChangedHandler(f:(Option[IntersectionPosition]) => Unit) = nearestIntersectionChangedHandlers -= f
-
   private var pingedIntersections = Map[IntersectionPosition, Long]()
 
   private var points = List[PointOfInterest]()
 
-  private val nearestPointsHandlers = ListBuffer[(List[PointOfInterest]) => Unit]()
-
-  def onNearestPoints(f:(List[PointOfInterest]) => Unit) = {
-    f(points)
-    nearestPointsHandlers += f
-  }
-
-  def nearestPoints(v:List[PointOfInterest]) = nearestPointsHandlers.foreach(_(v))
-
-  def removeNearestPointsHandler(f:(List[PointOfInterest]) => Unit) = nearestPointsHandlers -= f
-
-  onNearestIntersectionChanged { intersection =>
+  NearestIntersectionChanged += { intersection:Option[IntersectionPosition] =>
     pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 120000)
     intersection.foreach { i =>
       pingedIntersections.get(i).getOrElse {
@@ -328,44 +224,46 @@ class HermesService extends Service with LocationListener {
     }.orElse(Option(loc.getBearing).map(Direction(_)))
     if(!processing) {
       if(lastSpeed != spd)
-        speedChanged(spd.map(_ to hours))
+        SpeedChanged(spd.map(_ to hours))
       val dir = spd.flatMap { s =>
         if(s.distance.units == 0)
           lastDirection
         else None
       }.orElse(Option(loc.getBearing).map(Direction(_)))
       if(dir != lastDirection)
-        directionChanged(dir)
+        DirectionChanged(dir)
       val acc = Option(loc.getAccuracy).map(Distance(_))
       if(acc != lastAccuracy)
-        accuracyChanged(acc)
+        AccuracyChanged(acc)
       val provider = Option(loc.getProvider)
       if(provider != lastProvider)
-        providerChanged(provider)
+        ProviderChanged(provider)
     } else {
       unprocessedLocation = Some(loc)
       return
     }
     processing = true
-    //future {
+    future {
       Option(Looper.myLooper).getOrElse(Looper.prepare())
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
-      perspectiveChanged(p)
+      PerspectiveChanged(p)
       val np = p.nearestPath
       if(np != lastNearestPath)
-        nearestPathChanged(np)
+        NearestPathChanged(np)
+      lastNearestPath = np
       val ni = p.nearestIntersection
       if(ni != lastNearestIntersection)
-        nearestIntersectionChanged(ni)
+        NearestIntersectionChanged(ni)
+      lastNearestIntersection = ni
       points = p.nearestPoints()
-      nearestPoints(points)
+      NearestPoints(points)
       previousPerspective = Some(p)
       processing = false
       unprocessedLocation.foreach { l =>
         unprocessedLocation = None
         onLocationChanged(l)
       }
-    //}
+    }
   }
 
   def onProviderDisabled(provider:String) {

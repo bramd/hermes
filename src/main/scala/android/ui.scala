@@ -9,13 +9,14 @@ import android.view._
 import android.widget._
 
 import info.hermesnav.core._
+import events._
 import preferences._
 
 class Hermes extends Activity with ServiceConnection {
 
   private var svc:Option[HermesService] = None
 
-  private def updateNearestPath(np:Option[Path]) {
+  private val updateNearestPath = { np:Option[Path] =>
     val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(np.map { p =>
@@ -24,7 +25,7 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateNearestIntersection(p:Perspective) {
+  private val updateNearestIntersection = {p:Perspective =>
     val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(p.nearestIntersection.map { i =>
@@ -33,7 +34,7 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateDirection(dir:Option[Direction]) {
+  private val updateDirection = { dir:Option[Direction] =>
     val v = findViewById(R.id.direction).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(dir.map { d =>
@@ -42,7 +43,7 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateSpeed(spd:Option[Speed]) {
+  private val updateSpeed = { spd:Option[Speed] =>
     val v = findViewById(R.id.speed).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(spd.map { s =>
@@ -51,7 +52,7 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateAccuracy(acc:Option[Distance]) {
+  private val updateAccuracy = { acc:Option[Distance] =>
     val v = findViewById(R.id.accuracy).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(acc.map { a =>
@@ -60,14 +61,14 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  private def updateProvider(p:Option[String]) {
+  private val updateProvider = { p:Option[String] =>
     val v = findViewById(R.id.provider).asInstanceOf[TextView]
     runOnUiThread {
       v.setText(p.getOrElse(""))
     }
   }
 
-  private def updateNearestPoints(points:List[PointOfInterest]) {
+  private val updateNearestPoints = { points:List[PointOfInterest] =>
     val list = findViewById(R.id.points).asInstanceOf[ListView]
     val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)
     runOnUiThread {
@@ -85,28 +86,26 @@ class Hermes extends Activity with ServiceConnection {
 
   override def onDestroy() {
     super.onDestroy()
-    svc.foreach { s =>
-      s.removeNearestPathChangedHandler(updateNearestPath)
-      s.removePerspectiveChangedHandler(updateNearestIntersection)
-      s.removeDirectionChangedHandler(updateDirection)
-      s.removeSpeedChangedHandler(updateSpeed)
-      s.removeAccuracyChangedHandler(updateAccuracy)
-      s.removeProviderChangedHandler(updateProvider)
-      s.removeNearestPointsHandler(updateNearestPoints)
-    }
+    NearestPathChanged -= updateNearestPath
+    PerspectiveChanged -= updateNearestIntersection
+    DirectionChanged -= updateDirection
+    SpeedChanged -= updateSpeed
+    AccuracyChanged -= updateAccuracy
+    ProviderChanged -= updateProvider
+    NearestPoints -= updateNearestPoints
     unbindService(this)
   }
 
   def onServiceConnected(className:ComponentName, rawBinder:IBinder) {
     val s = rawBinder.asInstanceOf[HermesService#LocalBinder].getService
     svc = Some(s)
-    s.onNearestPathChanged(updateNearestPath)
-    s.onPerspectiveChanged(updateNearestIntersection)
-    s.onDirectionChanged(updateDirection)
-    s.onSpeedChanged(updateSpeed)
-    s.onAccuracyChanged(updateAccuracy)
-    s.onProviderChanged(updateProvider)
-    s.onNearestPoints(updateNearestPoints)
+    NearestPathChanged += updateNearestPath
+    PerspectiveChanged += updateNearestIntersection
+    DirectionChanged += updateDirection
+    SpeedChanged += updateSpeed
+    AccuracyChanged += updateAccuracy
+    ProviderChanged += updateProvider
+    NearestPoints += updateNearestPoints
   }
 
   def onServiceDisconnected(className:ComponentName) {
