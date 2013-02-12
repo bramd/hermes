@@ -17,5 +17,5 @@ platformName in Android := "android-17"
 nativeLibrariesPath in Android <<= baseDirectory / "libs"
 
 proguardOption in Android := """
-  -keep class scala.collection.SeqLike { public protected *; }
+  -keep class scala.collection.SeqLike { *; }
 """
