@@ -65,6 +65,7 @@ class HermesService extends Service with LocationListener {
     service = Some(this)
     //Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
+    Sensors()
     loadMap()
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
@@ -210,6 +211,16 @@ class HermesService extends Service with LocationListener {
   }
 
   private var previousPerspective:Option[Perspective] = None
+
+  private var compassEnabled = false
+
+  CompassEnabled += { enabled:Boolean =>
+    if(enabled && !compassEnabled)
+      sendMessage("Compass enabled")
+    else if(!enabled && compassEnabled)
+      sendMessage("Compass disabled")
+    compassEnabled = enabled
+  }
 
   private var processing = false
 
