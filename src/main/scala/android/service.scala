@@ -62,6 +62,7 @@ class HermesService extends Service with LocationListener {
 
   override def onCreate {
     super.onCreate()
+    service = Some(this)
     //Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
     loadMap()
@@ -72,6 +73,7 @@ class HermesService extends Service with LocationListener {
 
   override def onDestroy() {
     super.onDestroy()
+    service = None
     maps.foreach(_.close())
     setLocationEnabled(false)
     stopForeground(true)
@@ -217,28 +219,22 @@ class HermesService extends Service with LocationListener {
     val spd = Option(loc.getSpeed).map { s =>
       Speed(Distance(s), second)
     }
-    val dir = spd.flatMap { s =>
-      if(s.distance.units == 0)
-        lastDirection
-      else None
-    }.orElse(Option(loc.getBearing).map(Direction(_)))
-    if(!processing) {
-      if(lastSpeed != spd)
-        SpeedChanged(spd.map(_ to hours))
-      val dir = spd.flatMap { s =>
-        if(s.distance.units == 0)
-          lastDirection
-        else None
-      }.orElse(Option(loc.getBearing).map(Direction(_)))
-      if(dir != lastDirection)
-        DirectionChanged(dir)
-      val acc = Option(loc.getAccuracy).map(Distance(_))
-      if(acc != lastAccuracy)
-        AccuracyChanged(acc)
-      val provider = Option(loc.getProvider)
-      if(provider != lastProvider)
-        ProviderChanged(provider)
-    } else {
+    val dir = Option(loc.getBearing).map(Direction(_))
+    if(dir != lastDirection)
+      DirectionChanged(dir)
+    lastDirection = dir
+    if(lastSpeed != spd)
+      SpeedChanged(spd.map(_ to hours))
+    lastSpeed = spd
+    val acc = Option(loc.getAccuracy).map(Distance(_))
+    if(acc != lastAccuracy)
+      AccuracyChanged(acc)
+    lastAccuracy = acc
+    val provider = Option(loc.getProvider)
+    if(provider != lastProvider)
+      ProviderChanged(provider)
+    lastProvider = provider
+    if(processing) {
       unprocessedLocation = Some(loc)
       return
     }
