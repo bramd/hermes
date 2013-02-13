@@ -230,7 +230,9 @@ class HermesService extends Service with LocationListener {
     val spd = Option(loc.getSpeed).map { s =>
       Speed(Distance(s), second)
     }
-    val dir = Option(loc.getBearing).map(Direction(_))
+    val dir = spd.filter(_.distance.units == 0).flatMap { s =>
+      previousPerspective.map(_.direction)
+    }.getOrElse(Option(loc.getBearing).map(Direction(_)))
     if(dir != lastDirection)
       DirectionChanged(dir)
     lastDirection = dir
