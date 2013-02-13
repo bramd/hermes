@@ -49,7 +49,9 @@ object Sensors extends SensorEventListener {
 
   private var lastCompassToggle = System.currentTimeMillis
 
-  private val CompassThreshold = 45
+  private val CompassPitchThreshold = 70
+
+  private val CompassRollThreshold = 10
 
   private var accuracies:Map[Sensor, Int] = Map.empty
 
@@ -73,12 +75,13 @@ object Sensors extends SensorEventListener {
     _pitch = math.toDegrees(orientation(1))
     _roll = math.toDegrees(orientation(2))
     if(System.currentTimeMillis-lastCompassToggle >= 2000) {
-      val test = pitch/10*10
-      if(math.abs(test) <= CompassThreshold && !compassEnabled && math.abs(roll) <= 90) {
+      val testPitch = pitch/10*10
+      val testRoll = roll/10*10
+      if(math.abs(testPitch) <= CompassPitchThreshold && !compassEnabled && math.abs(testRoll) <= CompassRollThreshold) {
         compassEnabled = true
         lastCompassToggle = System.currentTimeMillis
         CompassEnabled(compassEnabled)
-      } else if((math.abs(test) > CompassThreshold || math.abs(roll) > 90) && compassEnabled) {
+      } else if((math.abs(testPitch) > CompassPitchThreshold || math.abs(testRoll) > CompassRollThreshold) && compassEnabled) {
         compassEnabled = false
         lastCompassToggle = System.currentTimeMillis
         CompassEnabled(compassEnabled)
