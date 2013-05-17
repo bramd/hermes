@@ -181,7 +181,7 @@ class HermesService extends Service with LocationListener {
       try {
         sendMessage(getString(R.string.offRoad), true)
       } catch {
-        case e => Log.e("hermes", "Error sending message", e)
+        case e:Throwable => Log.e("hermes", "Error sending message", e)
       }
     }
   }
