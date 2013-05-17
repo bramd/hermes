@@ -1,4 +1,6 @@
+import org.scalasbt.androidplugin._
 import AndroidKeys._
+
 
 name := "Core"
 
@@ -6,7 +8,7 @@ organization := "info.hermesnav"
 
 version := "1.0.0"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.1"
 
 scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions,postfixOps")
 
