@@ -1,4 +1,5 @@
 package info.hermesnav.android
+package services
 
 import java.io.File
 
@@ -21,7 +22,7 @@ import events._
 import model.{AndroidMap, AndroidPerspective}
 import preferences._
 
-class HermesService extends LocalService with LocationListener {
+class LocationService extends LocalService with LocationListener {
 
   private lazy val locationManager:LocationManager = getSystemService(Context.LOCATION_SERVICE).asInstanceOf[LocationManager]
 

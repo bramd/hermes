@@ -12,10 +12,11 @@ import org.scaloid.common.{LocalServiceConnection, SActivity}
 import info.hermesnav.core._
 import events._
 import preferences._
+import services._
 
 class Hermes extends SActivity {
 
-  private var svc = new LocalServiceConnection[HermesService]
+  private var svc = new LocalServiceConnection[LocationService]
 
   private val updateNearestPath = { np:Option[Path] =>
     val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
@@ -79,7 +80,7 @@ class Hermes extends SActivity {
 
   onCreate {
     setContentView(R.layout.info)
-    val serviceIntent = new Intent(this, classOf[HermesService])
+    val serviceIntent = new Intent(this, classOf[LocationService])
     startService(serviceIntent)
   }
 
