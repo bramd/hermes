@@ -7,14 +7,15 @@ import android.os._
 import android.preference._
 import android.view._
 import android.widget._
+import org.scaloid.common.{LocalServiceConnection, SActivity}
 
 import info.hermesnav.core._
 import events._
 import preferences._
 
-class Hermes extends Activity with ServiceConnection {
+class Hermes extends SActivity {
 
-  private var svc:Option[HermesService] = None
+  private var svc = new LocalServiceConnection[HermesService]
 
   private val updateNearestPath = { np:Option[Path] =>
     val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
@@ -76,16 +77,13 @@ class Hermes extends Activity with ServiceConnection {
     }
   }
 
-  override def onCreate(bundle:Bundle) {
-    super.onCreate(bundle)
+  onCreate {
     setContentView(R.layout.info)
     val serviceIntent = new Intent(this, classOf[HermesService])
     startService(serviceIntent)
-    bindService(serviceIntent, this, Context.BIND_AUTO_CREATE)
   }
 
-  override def onDestroy() {
-    super.onDestroy()
+  onDestroy {
     NearestPathChanged -= updateNearestPath
     PerspectiveChanged -= updateNearestIntersection
     DirectionChanged -= updateDirection
@@ -93,12 +91,9 @@ class Hermes extends Activity with ServiceConnection {
     AccuracyChanged -= updateAccuracy
     ProviderChanged -= updateProvider
     NearestPoints -= updateNearestPoints
-    unbindService(this)
   }
 
-  def onServiceConnected(className:ComponentName, rawBinder:IBinder) {
-    val s = rawBinder.asInstanceOf[HermesService#LocalBinder].getService
-    svc = Some(s)
+  svc.onConnected {
     NearestPathChanged += updateNearestPath
     PerspectiveChanged += updateNearestIntersection
     DirectionChanged += updateDirection
@@ -106,10 +101,7 @@ class Hermes extends Activity with ServiceConnection {
     AccuracyChanged += updateAccuracy
     ProviderChanged += updateProvider
     NearestPoints += updateNearestPoints
-  }
-
-  def onServiceDisconnected(className:ComponentName) {
-    svc = None
+    println("Did it.")
   }
 
   private var menu:Option[Menu] = None
@@ -130,7 +122,7 @@ class Hermes extends Activity with ServiceConnection {
   }
 
   def exit() {
-    svc.foreach(_.stopSelf)
+    svc.service.stopSelf()
     finish()
   }
 

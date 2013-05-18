@@ -14,13 +14,14 @@ import android.provider._
 import android.util.Log
 import android.widget._
 import jsqlite._
+import org.scaloid.common.LocalService
 
 import info.hermesnav.core._
 import events._
 import model.{AndroidMap, AndroidPerspective}
 import preferences._
 
-class HermesService extends Service with LocationListener {
+class HermesService extends LocalService with LocationListener {
 
   private lazy val locationManager:LocationManager = getSystemService(Context.LOCATION_SERVICE).asInstanceOf[LocationManager]
 
@@ -60,8 +61,7 @@ class HermesService extends Service with LocationListener {
 
   private var initialized = false
 
-  override def onCreate {
-    super.onCreate()
+  onCreate {
     service = Some(this)
     //Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
@@ -72,8 +72,7 @@ class HermesService extends Service with LocationListener {
     initialized = true
   }
 
-  override def onDestroy() {
-    super.onDestroy()
+  onDestroy {
     service = None
     maps.foreach(_.close())
     setLocationEnabled(false)
@@ -81,14 +80,6 @@ class HermesService extends Service with LocationListener {
     notificationManager.cancelAll()
     initialized = false
   }
-
-  class LocalBinder extends Binder {
-    def getService = HermesService.this
-  }
-
-  val binder = new LocalBinder
-
-  override def onBind(intent:Intent):IBinder = binder
 
   private var locationEnabled = false
 

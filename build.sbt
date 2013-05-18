@@ -21,3 +21,9 @@ nativeLibrariesPath in Android <<= baseDirectory / "libs"
 proguardOption in Android := """
   -keep class scala.collection.SeqLike { *; }
 """
+
+addArtifact(Artifact("google-play-services", "apklib", "apklib"), apklibPackage in Android).settings
+
+libraryDependencies := Seq(
+  "org.scaloid" % "scaloid" % "1.1_8_2.10"
+)
