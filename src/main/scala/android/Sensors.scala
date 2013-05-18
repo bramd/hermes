@@ -51,7 +51,7 @@ object Sensors extends SensorEventListener {
 
   private val CompassPitchThreshold = 70
 
-  private val CompassRollThreshold = 10
+  private val CompassRollThreshold = 20
 
   private var accuracies:Map[Sensor, Int] = Map.empty
 
