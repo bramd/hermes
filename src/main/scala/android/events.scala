@@ -39,6 +39,8 @@ class Event[T] {
 
 object AccuracyChanged extends Event[Option[Distance]]
 
+object AltitudeChanged extends Event[Option[Distance]]
+
 object CompassEnabled extends Event[Boolean]
 
 object DirectionChanged extends Event[Option[Direction]]

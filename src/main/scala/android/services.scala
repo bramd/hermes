@@ -149,6 +149,8 @@ class LocationService extends LocalService with LocationListener {
     }
   }
 
+  private var lastAltitude:Option[Distance] = None
+
   private var lastProvider:Option[String] = None
 
   private var lastNearestPath:Option[Path] = None
@@ -231,6 +233,10 @@ class LocationService extends LocalService with LocationListener {
     if(acc != lastAccuracy)
       AccuracyChanged(acc)
     lastAccuracy = acc
+    val altitude = Option(loc.getAltitude).map(Distance(_))
+    if(altitude != lastAltitude)
+      AltitudeChanged(altitude)
+    lastAltitude = altitude
     val provider = Option(loc.getProvider)
     if(provider != lastProvider)
       ProviderChanged(provider)

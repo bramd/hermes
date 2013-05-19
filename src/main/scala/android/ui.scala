@@ -58,6 +58,16 @@ class Hermes extends SActivity {
     }
   }
 
+  private lazy val altitude = new STextView
+
+  private val updateAltitude = { alt:Option[Distance] =>
+    runOnUiThread {
+      altitude.text = alt.map { a =>
+        a.to(Preferences.measurementSystem).toString
+      }.getOrElse("")
+    }
+  }
+
   private lazy val accuracy = new STextView
 
   private val updateAccuracy = { acc:Option[Distance] =>
@@ -110,6 +120,7 @@ class Hermes extends SActivity {
         orientation = HORIZONTAL
         this += direction
         this += speed
+        this += altitude
         this += accuracy
         this += provider
       }
@@ -122,6 +133,7 @@ class Hermes extends SActivity {
     PerspectiveChanged -= updateNearestIntersection
     DirectionChanged -= updateDirection
     SpeedChanged -= updateSpeed
+    AltitudeChanged -= updateAltitude
     AccuracyChanged -= updateAccuracy
     ProviderChanged -= updateProvider
     NearestPoints -= updateNearestPoints
@@ -132,6 +144,7 @@ class Hermes extends SActivity {
     PerspectiveChanged += updateNearestIntersection
     DirectionChanged += updateDirection
     SpeedChanged += updateSpeed
+    AltitudeChanged += updateAltitude
     AccuracyChanged += updateAccuracy
     ProviderChanged += updateProvider
     NearestPoints += updateNearestPoints
