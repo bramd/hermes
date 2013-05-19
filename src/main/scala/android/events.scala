@@ -9,8 +9,12 @@ class Event[T] {
 
   private val handlers = ListBuffer[(T) => Any]()
 
-  def add(h:(T) => Any) =
+  private var lastArg:Option[T] = None
+
+  def add(h:(T) => Any) = {
+    lastArg.foreach(h(_))
     handlers += h
+  }
 
   def +=(h:(T) => Any) =
     add(h)
@@ -33,7 +37,10 @@ class Event[T] {
   def -=(h: => Any) =
     remove(h)
 
-  def apply(arg:T) = handlers.foreach(_(arg))
+  def apply(arg:T) {
+    handlers.foreach(_(arg))
+    lastArg = Some(arg)
+  }
 
 }
 
