@@ -116,7 +116,10 @@ class LocationService extends LocalService with LocationListener {
 
   private var lastDirection:Option[Direction] = None
 
+  private var lastAnnouncedCompassDirection = 0l
+
   DirectionChanged += { (direction:Option[Direction]) =>
+    val compassDirectionAnnounceDelay = 500
     for(
       dir <- direction;
       lastDir <- lastDirection
@@ -127,15 +130,24 @@ class LocationService extends LocalService with LocationListener {
             val ccd = dir.coarseCardinalDirection
             val lcd = lastDir.coarseCardinalDirection
             if(ccd.toString != lcd.toString)
-              sendMessage(ccd.toString)
+              if(!compassEnabled || (compassEnabled && System.currentTimeMillis-lastAnnouncedCompassDirection >= compassDirectionAnnounceDelay)) {
+                sendMessage(ccd.toString)
+                if(compassEnabled)
+                  lastAnnouncedCompassDirection = System.currentTimeMillis
+              }
           case DirectionAnnouncementPrecision.High =>
             val ccd = dir.fineCardinalDirection
             val lcd = lastDir.fineCardinalDirection
             if(ccd.toString != lcd.toString)
-              sendMessage(ccd.toString)
+              if(!compassEnabled || (compassEnabled && System.currentTimeMillis-lastAnnouncedCompassDirection >= compassDirectionAnnounceDelay)) {
+                sendMessage(ccd.toString)
+                if(compassEnabled)
+                  lastAnnouncedCompassDirection 
+              }
           case _ =>
         }
     }
+    lastDirection = direction
   }
 
   private var lastSpeed:Option[Speed] = None
@@ -220,12 +232,16 @@ class LocationService extends LocalService with LocationListener {
     val spd = Option(loc.getSpeed).map { s =>
       Speed(Distance(s), second)
     }
-    val dir = spd.filter(_.distance.units == 0).flatMap { s =>
-      previousPerspective.map(_.direction)
-    }.getOrElse(Option(loc.getBearing).map(Direction(_)))
-    if(dir != lastDirection)
-      DirectionChanged(dir)
-    lastDirection = dir
+    val dir = if(!compassEnabled) {
+      val d2 = spd.filter(_.distance.units == 0).flatMap { s =>
+        previousPerspective.map(_.direction)
+      }.getOrElse(Option(loc.getBearing).map(Direction(_)))
+      if(d2 != lastDirection)
+        DirectionChanged(d2)
+      lastDirection = d2
+      d2
+    } else
+      lastDirection
     if(lastSpeed != spd)
       SpeedChanged(spd.map(_ to hours))
     lastSpeed = spd

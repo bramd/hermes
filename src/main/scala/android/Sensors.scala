@@ -87,9 +87,8 @@ object Sensors extends SensorEventListener {
         CompassEnabled(compassEnabled)
       }
     }
-    if(compassEnabled) {
-      
-    }
+    if(compassEnabled)
+      DirectionChanged(Some(Direction(yaw)))
     /*if(System.currentTimeMillis-lastSpeak >= 10000) {
       service.foreach(_.sendMessage(yaw.toInt.toString))
       lastSpeak = System.currentTimeMillis
