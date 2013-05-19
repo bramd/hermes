@@ -15,7 +15,7 @@ import android.provider._
 import android.util.Log
 import android.widget._
 import jsqlite._
-import org.scaloid.common.LocalService
+import org.scaloid.common.{info => _, Preferences => _, _}
 
 import info.hermesnav.core._
 import events._
@@ -106,13 +106,9 @@ class LocationService extends LocalService with LocationListener {
 
   private val providerStatuses:collection.mutable.Map[String, Int] = collection.mutable.Map.empty
 
-  private val handler = new Handler()
-
   private def sendMessage(msg:String, persistent:Boolean = false) = {
     if(initialized) {
-      handler.post {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-      }
+      toast(msg)
       if(persistent)
         startForeground(1, getNotification(msg))
     }
