@@ -24,4 +24,10 @@
     android:defaultValue="false"
     />
 
+  <CheckBoxPreference
+    android:key="compassMode"
+    android:title="@string/compassMode"
+    android:defaultValue="true"
+    />
+
 </PreferenceScreen>

@@ -7,6 +7,7 @@ import android.preference._
 import android.provider._
 
 import info.hermesnav.core._
+import events._
 
 object DirectionAnnouncementPrecision extends Enumeration {
   val Off = Value("off")
@@ -14,7 +15,7 @@ object DirectionAnnouncementPrecision extends Enumeration {
   val High = Value("high")
 }
 
-object Preferences {
+object Preferences extends SharedPreferences.OnSharedPreferenceChangeListener {
 
   private var context:Context = null
 
@@ -22,6 +23,7 @@ object Preferences {
 
   def apply(c:Context) {
     context = c
+    preferences.registerOnSharedPreferenceChangeListener(this)
   }
 
   def intersectionNotificationTone = preferences.getString("intersection_notification_tone", "") match {
@@ -44,5 +46,15 @@ object Preferences {
 
   def announceAccuracyChanges_? =
     preferences.getBoolean("announceAccuracyChanges", false)
+
+  def compassMode_? =
+    preferences.getBoolean("compassMode", true)
+
+  def onSharedPreferenceChanged(p:SharedPreferences, key:String) {
+    key match {
+      case "compassMode" => CompassEnabled(compassMode_?)
+      case _ =>
+    }
+  }
 
 }

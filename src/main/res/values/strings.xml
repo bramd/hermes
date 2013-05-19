@@ -22,5 +22,6 @@
   <string name="low">Low</string>
   <string name="high">High</string>
   <string name="announceAccuracyChanges">Announce accuracy changes</string>
+  <string name="compassMode">Compass mode</string>
 
 </resources>

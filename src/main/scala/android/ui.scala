@@ -86,7 +86,10 @@ class Hermes extends SActivity {
     }
   }
 
-  private lazy val nearestPoints = new SListView
+  private lazy val nearestPoints = new SListView {
+    /*onScroll { (l:ListView, firstVisible:Int, visibleCount:Int, totalCount:Int) =>
+    }*/
+  }
 
   private val updateNearestPoints = { points:List[PointOfInterest] =>
     val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)

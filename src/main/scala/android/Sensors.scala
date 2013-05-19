@@ -10,6 +10,7 @@ import android.util.Log
 import info.hermesnav.core._
 import events._
 import model._
+import preferences._
 
 object Sensors extends SensorEventListener {
 
@@ -74,7 +75,7 @@ object Sensors extends SensorEventListener {
     _yaw = math.toDegrees(orientation(0))
     _pitch = math.toDegrees(orientation(1))
     _roll = math.toDegrees(orientation(2))
-    if(System.currentTimeMillis-lastCompassToggle >= 2000) {
+    if(Preferences.compassMode_? && System.currentTimeMillis-lastCompassToggle >= 2000) {
       val testPitch = pitch/10*10
       val testRoll = roll/10*10
       if(math.abs(testPitch) <= CompassPitchThreshold && !compassEnabled && math.abs(testRoll) <= CompassRollThreshold) {
@@ -87,7 +88,7 @@ object Sensors extends SensorEventListener {
         CompassEnabled(compassEnabled)
       }
     }
-    if(compassEnabled)
+    if(Preferences.compassMode_? && compassEnabled)
       DirectionChanged(Some(Direction(yaw)))
     /*if(System.currentTimeMillis-lastSpeak >= 10000) {
       service.foreach(_.sendMessage(yaw.toInt.toString))
