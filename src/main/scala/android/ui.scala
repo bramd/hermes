@@ -7,7 +7,7 @@ import android.os._
 import android.preference._
 import android.view._
 import android.widget._
-import org.scaloid.common.{LocalServiceConnection, SActivity}
+import org.scaloid.common.{info => _, Preferences => _, _}
 
 import info.hermesnav.core._
 import events._
@@ -18,70 +18,103 @@ class Hermes extends SActivity {
 
   private var svc = new LocalServiceConnection[LocationService]
 
+  private lazy val nearestPath = new STextView
+
   private val updateNearestPath = { np:Option[Path] =>
-    val v = findViewById(R.id.nearestPath).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(np.map { p =>
+      nearestPath.text = np.map { p =>
         getString(R.string.nearestPath, p.toString)
-      }.getOrElse(getString(R.string.offRoad)))
+      }.getOrElse(getString(R.string.offRoad))
     }
   }
+
+  private lazy val nearestIntersection = new STextView
 
   private val updateNearestIntersection = {p:Perspective =>
-    val v = findViewById(R.id.nearestIntersection).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(p.nearestIntersection.map { i =>
+      nearestIntersection.text = p.nearestIntersection.map { i =>
         i.name+": "+p.distanceTo(i).to(Preferences.measurementSystem)+p.bearingTo(i).map(" "+_).getOrElse("")
-      }.getOrElse(""))
+      }.getOrElse("")
     }
   }
+
+  private lazy val direction = new STextView
 
   private val updateDirection = { dir:Option[Direction] =>
-    val v = findViewById(R.id.direction).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(dir.map { d =>
+      direction.text = dir.map { d =>
         d.toString
-      }.getOrElse(""))
+      }.getOrElse("")
     }
   }
+
+  private lazy val speed = new STextView
 
   private val updateSpeed = { spd:Option[Speed] =>
-    val v = findViewById(R.id.speed).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(spd.map { s =>
+      speed.text = spd.map { s =>
         s.to(Preferences.measurementSystem).toString
-      }.getOrElse(""))
+      }.getOrElse("")
     }
   }
+
+  private lazy val accuracy = new STextView
 
   private val updateAccuracy = { acc:Option[Distance] =>
-    val v = findViewById(R.id.accuracy).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(acc.map { a =>
+      accuracy.text = acc.map { a =>
         a.to(Preferences.measurementSystem).toString
-      }.getOrElse(""))
+      }.getOrElse("")
     }
   }
+
+  private lazy val provider = new STextView
 
   private val updateProvider = { p:Option[String] =>
-    val v = findViewById(R.id.provider).asInstanceOf[TextView]
     runOnUiThread {
-      v.setText(p.getOrElse(""))
+      provider.text = p.getOrElse("")
     }
   }
 
+  private lazy val nearestPoints = new SListView
+
   private val updateNearestPoints = { points:List[PointOfInterest] =>
-    val list = findViewById(R.id.points).asInstanceOf[ListView]
     val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)
     runOnUiThread {
-      list.setAdapter(adapter)
+      nearestPoints.setAdapter(adapter)
     }
   }
 
   onCreate {
-    setContentView(R.layout.info)
-    val serviceIntent = new Intent(this, classOf[LocationService])
-    startService(serviceIntent)
+    contentView = new SVerticalLayout {
+      style {
+        case t:STextView => t.focusable = true
+      }
+      this += nearestPath
+      this += nearestIntersection
+      this += nearestPoints
+      this += new SLinearLayout {
+        style {
+          case v if(v == orientation) =>
+            v.gravity = Gravity.LEFT
+            v
+          case v if(v == provider) =>
+            v.gravity = Gravity.RIGHT
+            v.weight = 1
+            v
+          case v =>
+            v.gravity = Gravity.CENTER_HORIZONTAL
+            v.weight = 1
+            v
+        }
+        orientation = HORIZONTAL
+        this += direction
+        this += speed
+        this += accuracy
+        this += provider
+      }
+    }
+    startService[LocationService]
   }
 
   onDestroy {
@@ -123,7 +156,7 @@ class Hermes extends SActivity {
   }
 
   def exit() {
-    svc.service.stopSelf()
+    stopService[LocationService]
     finish()
   }
 
