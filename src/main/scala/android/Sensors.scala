@@ -49,9 +49,9 @@ object Sensors extends SensorEventListener {
 
   private var lastCompassToggle = System.currentTimeMillis
 
-  private val CompassPitchThreshold = 70
+  private val CompassPitchThreshold = 60
 
-  private val CompassRollThreshold = 20
+  private val CompassRollThreshold = 30
 
   private var accuracies:Map[Sensor, Int] = Map.empty
 
