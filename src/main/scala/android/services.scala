@@ -71,6 +71,10 @@ class LocationService extends LocalService with LocationListener {
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
     initialized = true
+    queuedMessages.reverse.foreach { i =>
+      sendMessage(i._1, i._2)
+    }
+    queuedMessages = Nil
   }
 
   onDestroy {
@@ -106,12 +110,15 @@ class LocationService extends LocalService with LocationListener {
 
   private val providerStatuses:collection.mutable.Map[String, Int] = collection.mutable.Map.empty
 
+  private var queuedMessages:List[Tuple2[String, Boolean]] = Nil
+
   private def sendMessage(msg:String, persistent:Boolean = false) = {
     if(initialized) {
       toast(msg)
       if(persistent)
         startForeground(1, getNotification(msg))
-    }
+    } else
+      queuedMessages ::= (msg, persistent)
   }
 
   private var lastDirection:Option[Direction] = None
@@ -180,11 +187,7 @@ class LocationService extends LocalService with LocationListener {
         true
       }
     }.getOrElse {
-      try {
-        sendMessage(getString(R.string.offRoad), true)
-      } catch {
-        case e:Throwable => Log.e("hermes", "Error sending message", e)
-      }
+      sendMessage(getString(R.string.offRoad), true)
     }
   }
 
