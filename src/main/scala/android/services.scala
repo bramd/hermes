@@ -66,7 +66,7 @@ class LocationService extends LocalService with LocationListener {
     service = Some(this)
     //Thread.setDefaultUncaughtExceptionHandler(new info.thewordnerd.CustomExceptionHandler("/sdcard"))
     Preferences(this)
-    Sensors()
+    //Sensors()
     loadMap()
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
@@ -99,7 +99,6 @@ class LocationService extends LocalService with LocationListener {
         criteria.setBearingAccuracy(Criteria.ACCURACY_HIGH)
         criteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH)
         criteria.setSpeedAccuracy(Criteria.ACCURACY_HIGH)
-        
         val provider = Option(locationManager.getBestProvider(criteria, true)).getOrElse(LocationManager.GPS_PROVIDER)
         locationManager.requestLocationUpdates(provider, 0, 0, this)
       case false if(!locationEnabled) =>
@@ -123,36 +122,26 @@ class LocationService extends LocalService with LocationListener {
 
   private var lastDirection:Option[Direction] = None
 
-  private var lastAnnouncedCompassDirection = 0l
+  private var lastCompassAnnouncementTime = 0l
+
+  private var lastAnnouncedDirection = ""
 
   DirectionChanged += { (direction:Option[Direction]) =>
-    val compassDirectionAnnounceDelay = 500
-    for(
-      dir <- direction;
-      lastDir <- lastDirection
-    ) {
-      if(Preferences.directionAnnouncementPrecision != DirectionAnnouncementPrecision.Off)
-        Preferences.directionAnnouncementPrecision match {
-          case DirectionAnnouncementPrecision.Low =>
-            val ccd = dir.coarseCardinalDirection
-            val lcd = lastDir.coarseCardinalDirection
-            if(ccd.toString != lcd.toString)
-              if(!compassEnabled || (compassEnabled && System.currentTimeMillis-lastAnnouncedCompassDirection >= compassDirectionAnnounceDelay)) {
-                sendMessage(ccd.toString)
-                if(compassEnabled)
-                  lastAnnouncedCompassDirection = System.currentTimeMillis
-              }
-          case DirectionAnnouncementPrecision.High =>
-            val ccd = dir.fineCardinalDirection
-            val lcd = lastDir.fineCardinalDirection
-            if(ccd.toString != lcd.toString)
-              if(!compassEnabled || (compassEnabled && System.currentTimeMillis-lastAnnouncedCompassDirection >= compassDirectionAnnounceDelay)) {
-                sendMessage(ccd.toString)
-                if(compassEnabled)
-                  lastAnnouncedCompassDirection 
-              }
-          case _ =>
+    direction.foreach { dir =>
+      if(Preferences.directionAnnouncementPrecision != DirectionAnnouncementPrecision.Off) {
+        val announcement = Preferences.directionAnnouncementPrecision match {
+          case DirectionAnnouncementPrecision.Low => dir.coarseCardinalDirection.toString
+          case DirectionAnnouncementPrecision.High => dir.fineCardinalDirection.toString
         }
+        if(announcement != lastAnnouncedDirection) {
+          if(!compassEnabled || (compassEnabled && System.currentTimeMillis-lastCompassAnnouncementTime >= 500)) {
+            sendMessage(announcement)
+            lastAnnouncedDirection = announcement
+            if(compassEnabled)
+              lastCompassAnnouncementTime = System.currentTimeMillis
+          }
+        }
+      }
     }
     lastDirection = direction
   }
@@ -231,11 +220,15 @@ class LocationService extends LocalService with LocationListener {
 
   private var unprocessedLocation:Option[Location] = None
 
+  private var firstRun = true
+
   def onLocationChanged(loc:Location) {
     val spd = Option(loc.getSpeed).map { s =>
       Speed(Distance(s), second)
     }
-    val dir = if(!compassEnabled) {
+    val dir = if(compassEnabled)
+      lastDirection
+    else {
       val d2 = spd.filter(_.distance.units == 0).flatMap { s =>
         previousPerspective.map(_.direction)
       }.getOrElse(Option(loc.getBearing).map(Direction(_)))
@@ -243,21 +236,20 @@ class LocationService extends LocalService with LocationListener {
         DirectionChanged(d2)
       lastDirection = d2
       d2
-    } else
-      lastDirection
-    if(lastSpeed != spd)
+    }
+    if(firstRun || lastSpeed != spd)
       SpeedChanged(spd.map(_ to hours))
     lastSpeed = spd
     val acc = Option(loc.getAccuracy).map(Distance(_))
-    if(acc != lastAccuracy)
+    if(firstRun || acc != lastAccuracy)
       AccuracyChanged(acc)
     lastAccuracy = acc
     val altitude = Option(loc.getAltitude).map(Distance(_))
-    if(altitude != lastAltitude)
+    if(firstRun || altitude != lastAltitude)
       AltitudeChanged(altitude)
     lastAltitude = altitude
     val provider = Option(loc.getProvider)
-    if(provider != lastProvider)
+    if(firstRun || provider != lastProvider)
       ProviderChanged(provider)
     lastProvider = provider
     if(processing) {
@@ -270,17 +262,18 @@ class LocationService extends LocalService with LocationListener {
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
       PerspectiveChanged(p)
       val np = p.nearestPath
-      if(np != lastNearestPath)
+      if(firstRun || np != lastNearestPath)
         NearestPathChanged(np)
       lastNearestPath = np
       val ni = p.nearestIntersection
-      if(ni != lastNearestIntersection)
+      if(firstRun || ni != lastNearestIntersection)
         NearestIntersectionChanged(ni)
       lastNearestIntersection = ni
       points = p.nearestPoints()
       NearestPoints(points)
       previousPerspective = Some(p)
       processing = false
+      firstRun = false
       unprocessedLocation.foreach { l =>
         unprocessedLocation = None
         onLocationChanged(l)
