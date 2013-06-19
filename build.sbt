@@ -10,7 +10,9 @@ version := "1.0.0"
 
 scalaVersion := "2.10.1"
 
-scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions,postfixOps")
+javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
+
+scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions,postfixOps", "-target:jvm-1.6")
 
 AndroidProject.androidSettings
 
