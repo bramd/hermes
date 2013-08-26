@@ -175,7 +175,11 @@ class LocationService extends LocalService with LocationListener {
         true
       }
     }.getOrElse {
-      sendMessage(getString(R.string.offRoad), true)
+      try {
+        sendMessage(getString(R.string.offRoad), true)
+      } catch {
+        case e:NullPointerException => // TODO: Fix me
+      }
     }
   }
 
