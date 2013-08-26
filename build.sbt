@@ -1,6 +1,6 @@
-import org.scalasbt.androidplugin._
-import AndroidKeys._
+import sbtandroid._
 
+androidDefaults
 
 name := "Core"
 
@@ -8,24 +8,17 @@ organization := "info.hermesnav"
 
 version := "1.0.0"
 
-scalaVersion := "2.10.1"
+versionCode := 0
 
-javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
+scalaVersion := "2.10.2"
 
 scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions,postfixOps", "-target:jvm-1.6")
 
-AndroidProject.androidSettings
+javacOptions ++= Seq("-source", "1.6", "-target", "1.6")
 
-platformName in Android := "android-17"
-
-nativeLibrariesPath in Android <<= baseDirectory / "libs"
-
-proguardOption in Android := """
-  -keep class scala.collection.SeqLike { *; }
-"""
-
-addArtifact(Artifact("google-play-services", "apklib", "apklib"), apklibPackage in Android).settings
+platformName := "android-18"
 
 libraryDependencies := Seq(
-  "org.scaloid" % "scaloid" % "1.1_8_2.10"
+aarlib("com.google.android.gms" % "play-services" % "3.1.36"),
+  "org.scaloid" %% "scaloid" % "2.3-8"
 )
