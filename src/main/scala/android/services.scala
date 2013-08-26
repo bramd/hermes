@@ -52,7 +52,6 @@ class LocationService extends LocalService with LocationListener {
         graphFile.createNewFile()
       graph.open(graphFile.toString, Constants.SQLITE_OPEN_READONLY)
       maps = List(AndroidMap(features, graph))
-      sendMessage(getString(R.string.mapLoaded))
     } catch {
       case e:Throwable =>
         Log.d("hermes", "Error opening map", e)
@@ -306,5 +305,89 @@ class LocationService extends LocalService with LocationListener {
     }
     providerStatuses(provider) = status
   }
+
+}
+
+object LocationService {
+  var activelyViewing = false
+}
+
+import com.google.android.gms._
+import location._
+import DetectedActivity._
+import com.google.android.gms.common._
+import GooglePlayServicesClient._
+
+class ActivityDetectorConnector extends LocalService with ConnectionCallbacks with OnConnectionFailedListener {
+
+  private lazy val client = new ActivityRecognitionClient(this, this, this)
+
+  onCreate {
+    if(GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS)
+      client.connect()
+  }
+
+  def onConnected(b:Bundle) {
+    client.requestActivityUpdates(10000, pendingService(new Intent(this, classOf[ActivityDetector])))
+    client.disconnect()
+  }
+
+  def onDisconnected() {
+  }
+
+  def onConnectionFailed(r:ConnectionResult) {
+  }
+
+}
+
+class ActivityDetector extends IntentService("ActivityDetector") {
+
+  import ActivityDetector._
+
+  override protected def onHandleIntent(i:Intent) {
+    Preferences(this)
+    if(ActivityRecognitionResult.hasResult(i)) {
+      val result = ActivityRecognitionResult.extractResult(i)
+      val activity = result.getMostProbableActivity
+      val t = activity.getType
+      t match {
+        case STILL =>
+          Log.d("hermescheck", "Still: "+stoppedAt)
+          stoppedAt.map { s =>
+            Log.d("hermescheck", "Here: "+stoppedAt)
+            if(Preferences.activateWhenMoving_? && !LocationService.activelyViewing && System.currentTimeMillis-s >= 180000) {
+              Log.d("hermescheck", "Here2")
+              stopService(new Intent(this, classOf[LocationService]))
+              stoppedAt = None
+              startedAt = None
+            }
+          }.getOrElse {
+            stoppedAt = Some(System.currentTimeMillis)
+            startedAt = None
+            Log.d("hermescheck", "Here2: "+stoppedAt)
+          }
+        case TILTING | UNKNOWN =>
+        case _ =>
+          startedAt.map { s =>
+            if(Preferences.activateWhenMoving_? && (t != ON_FOOT || System.currentTimeMillis-s >= 30000)) {
+              startService(new Intent(this, classOf[LocationService]))
+              stoppedAt = None
+              startedAt = None
+            }
+          }.getOrElse {
+            startedAt = Some(System.currentTimeMillis)
+            stoppedAt = None
+          }
+      }
+    }
+  }
+
+}
+
+object ActivityDetector {
+
+  private var stoppedAt:Option[Long] = None
+
+  private var startedAt:Option[Long] = None
 
 }

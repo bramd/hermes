@@ -57,4 +57,7 @@ object Preferences extends SharedPreferences.OnSharedPreferenceChangeListener {
     }
   }
 
+  def activateWhenMoving_? =
+    preferences.getBoolean("activateWhenMoving", true)
+
 }

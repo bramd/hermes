@@ -107,7 +107,7 @@ object AndroidPath extends Classifier {
   def apply(map:AndroidMap, id:Int):Option[AndroidPath] = {
     var rv:Option[AndroidPath] = None
     map.features.exec(
-      "select name, highway, asWKT(GEOMETRY) as geom from lines where osm_id = "+id+" limit 1",
+      "select name, asWKT(GEOMETRY) as geom, * from lines where osm_id = "+id+" limit 1",
       { row:Map[String, String] =>
         rv = Some(new AndroidPath(map, SortedSet(id), row.get("name"), classify(row), row("geom")))
         false
@@ -261,24 +261,30 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
 
   val nearestPath:Option[Path] = {
     calcNearestPath.orElse {
-      var rv:Option[Path] = None
+      val distance = nearestPathThreshold.toDegreesAt(lat)
+      var paths:List[AndroidPath] = Nil
       maps.map { m =>
         m.features.exec(
-          """select osm_id, Distance(GEOMETRY, MakePoint("""+lon+""", """+lat+""")) as distance, name, highway, asWKT(GEOMETRY) as geom
+          """select osm_id, Distance(GEOMETRY, MakePoint("""+lon+""", """+lat+""")) as distance, name, asWKT(GEOMETRY) as geom, *
           from lines
           where lines.rowid in (
             select rowid from SpatialIndex
             where f_table_name = 'lines'
             and f_geometry_column = 'GEOMETRY'
-            and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestPathThreshold.toDegreesAt(lat)+""")
-          ) order by distance limit 1""",
+            and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+distance+""")
+          ) and distance <= """+distance+""" order by distance limit 1""",
           { row:Map[String, String] =>
-            rv = Some(AndroidPath(m, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom")))
+            paths ::= AndroidPath(m, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom"))
             false
           }
         )
       }
-      rv
+      (for(
+        p <- previous;
+        pnp <- p.nearestPath;
+        pnp2 = pnp if(paths.contains(pnp))
+      ) yield(pnp2))
+      .orElse(paths.reverse.headOption)
     }
   }
 

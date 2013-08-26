@@ -9,13 +9,19 @@
 
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"/>
 
   <application
     android:icon="@drawable/app_icon"
     android:label="Hermes">
 
     <service android:name=".services.LocationService"/>
+
+    <service android:name=".services.ActivityDetector"/>
+
+    <service android:name=".services.ActivityDetectorConnector"/>
 
     <activity
       android:label="Hermes"
@@ -30,6 +36,13 @@
     </activity>
 
     <activity android:name=".ui.Settings"/>
+
+    <receiver android:name=".receivers.BootReceiver">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <category android:name="android.intent.category.HOME"/>
+      </intent-filter>
+    </receiver>
 
   </application>
 </manifest>

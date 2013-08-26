@@ -11,8 +11,6 @@
   <string name="settings">Settings</string>
   <string name="exit">Exit</string>
 
-  <string name="mapLoaded">Map loaded</string>
-
   <string name="general">General</string>
   <string name="measurementSystem">Measurement system</string>
   <string name="imperial">Imperial</string>

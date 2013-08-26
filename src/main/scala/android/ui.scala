@@ -16,8 +16,6 @@ import services._
 
 class Hermes extends SActivity {
 
-  private var svc = new LocalServiceConnection[LocationService]
-
   private lazy val nearestPath = new STextView
 
   private val updateNearestPath = { np:Option[Path] =>
@@ -98,6 +96,20 @@ class Hermes extends SActivity {
     }
   }
 
+  private val locationService = new LocalServiceConnection[LocationService] {
+    onConnected {
+      NearestPathChanged += updateNearestPath
+      PerspectiveChanged += updateNearestIntersection
+      DirectionChanged += updateDirection
+      SpeedChanged += updateSpeed
+      AltitudeChanged += updateAltitude
+      AccuracyChanged += updateAccuracy
+      ProviderChanged += updateProvider
+      NearestPoints += updateNearestPoints
+      println("Did it.")
+    }
+  }
+
   onCreate {
     contentView = new SVerticalLayout {
       style {
@@ -129,6 +141,17 @@ class Hermes extends SActivity {
       }
     }
     startService[LocationService]
+    startService[ActivityDetectorConnector]
+    LocationService.activelyViewing = true
+  }
+
+  onPause {
+    LocationService.activelyViewing = false
+  }
+
+  onResume {
+    LocationService.activelyViewing = true
+    startService[LocationService]
   }
 
   onDestroy {
@@ -140,18 +163,7 @@ class Hermes extends SActivity {
     AccuracyChanged -= updateAccuracy
     ProviderChanged -= updateProvider
     NearestPoints -= updateNearestPoints
-  }
-
-  svc.onConnected {
-    NearestPathChanged += updateNearestPath
-    PerspectiveChanged += updateNearestIntersection
-    DirectionChanged += updateDirection
-    SpeedChanged += updateSpeed
-    AltitudeChanged += updateAltitude
-    AccuracyChanged += updateAccuracy
-    ProviderChanged += updateProvider
-    NearestPoints += updateNearestPoints
-    println("Did it.")
+    LocationService.activelyViewing = false
   }
 
   private var menu:Option[Menu] = None
@@ -173,6 +185,8 @@ class Hermes extends SActivity {
 
   def exit() {
     stopService[LocationService]
+    if(!Preferences.activateWhenMoving_?)
+      stopService[ActivityDetectorConnector]
     finish()
   }
 

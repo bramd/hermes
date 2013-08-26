@@ -50,7 +50,7 @@ object Sensors extends SensorEventListener {
 
   private var lastCompassToggle = System.currentTimeMillis
 
-  private val CompassPitchThreshold = 60
+  private val CompassPitchThreshold = 50
 
   private val CompassRollThreshold = 30
 
@@ -58,9 +58,9 @@ object Sensors extends SensorEventListener {
 
   def onSensorChanged(e:SensorEvent) {
     accuracies.get(e.sensor).foreach { a =>
-      if(a != SensorManager.SENSOR_STATUS_ACCURACY_HIGH && a != SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM) {
-        compassEnabled = false
-        CompassEnabled(false)
+      if(a == SensorManager.SENSOR_STATUS_ACCURACY_LOW) {
+        //compassEnabled = false
+        //CompassEnabled(false)
         return
       }
     }
@@ -90,10 +90,6 @@ object Sensors extends SensorEventListener {
     }
     if(Preferences.compassMode_? && compassEnabled)
       DirectionChanged(Some(Direction(yaw)))
-    /*if(System.currentTimeMillis-lastSpeak >= 10000) {
-      service.foreach(_.sendMessage(yaw.toInt.toString))
-      lastSpeak = System.currentTimeMillis
-    }*/
   }
 
   def onAccuracyChanged(sensor:Sensor, accuracy:Int) {
