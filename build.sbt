@@ -20,5 +20,6 @@ platformName := "android-18"
 
 libraryDependencies := Seq(
 aarlib("com.google.android.gms" % "play-services" % "3.1.36"),
-  "org.scaloid" %% "scaloid" % "2.3-8"
+  "org.scaloid" %% "scaloid" % "2.3-8",
+  "ch.acra" % "acra" % "4.5.0"
 )
