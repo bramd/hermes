@@ -1,3 +1,4 @@
 #!/bin/sh
 
-docker build -t hermes/importer `pwd`/docker/
+BASEDIR=$(dirname $0)
+docker build -t hermes/importer $BASEDIR/docker
