@@ -27,7 +27,7 @@ compile "*" do
   else
     case item[:extension]
       when "md"
-        filter :rdiscount
+        filter :kramdown, :smart_quotes => ["apos", "apos", "quot", "quot"]
       when "asciidoc"
         filter :asciidoc
       when "slim"
@@ -35,7 +35,7 @@ compile "*" do
       else
         filter :erb
     end
-    layout "default"
+    layout "default" if item[:extension] != "asciidoc"
   end
 end
 
