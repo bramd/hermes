@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker run hermes/spatialite
+docker run -v `pwd`:/target hermes/spatialite

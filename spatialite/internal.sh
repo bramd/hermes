@@ -1,6 +1,7 @@
 #!/bin/sh
 cd /usr/local/src
 git clone https://code.google.com/p/spatialite-android/
+find spatialite-android -name '*.class' -exec rm {} \;
 cd spatialite-android/spatialite-android-library/jni/
 wget http://download.osgeo.org/proj/proj-4.8.0.tar.gz 
 wget http://download.osgeo.org/geos/geos-3.3.6.tar.bz2 
@@ -21,5 +22,7 @@ cd libspatialite-4.0.0/
 cd .. 
 /opt/android/ndk/ndk-build -j10
 cd ..
-rm src/jsqlite/*.class
+android update project --path . --target 1
 ant release
+cp bin/classes.jar /target/spatial-android.jar
+cp -a libs /target/
