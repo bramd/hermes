@@ -1,10 +1,12 @@
 target
 lib
 libs
-.db
-.pbf
+*.db
+*.pbf
 src/website/Gemfile.lock
 src/website/output
 src/website/crash.log
 src/website/tmp
 src/website/.bundle
+spatialite/*.jar
+spatialite/lib
