@@ -205,7 +205,11 @@ object AndroidIntersectionPosition {
   }
 }
 
-case class AndroidPointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double) extends PointOfInterest with Namer {
+case class AndroidIdentifier(val source:String, val identifier:Long) extends Identifier {
+  
+}
+
+case class AndroidPointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double, val identifier:Identifier) extends PointOfInterest with Namer {
 
   val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
 
@@ -229,7 +233,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
         and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
       order by distance limit """+limit,
       { row:Map[String, String] =>
-        rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble)
+        rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble, AndroidIdentifier("osm", row("osm_id").toLong))
         false
       }
     ))

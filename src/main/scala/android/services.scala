@@ -315,7 +315,6 @@ class LocationService extends LocalService with LocationListener {
 object LocationService {
   var activelyViewing = false
 }
-
 import com.google.android.gms._
 import location._
 import DetectedActivity._

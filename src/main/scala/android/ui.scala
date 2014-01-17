@@ -7,15 +7,24 @@ import android.os._
 import android.preference._
 import android.view._
 import android.widget._
-import org.scaloid.common.{info => _, Preferences => _, _}
+import org.scaloid.common.{info => _, Preferences => _, SArrayAdapter => _, _}
+import collection.mutable.ListBuffer
+import collection.JavaConversions._
 
 import info.hermesnav.core._
 import events._
 import preferences._
 import services._
 
+class PointOfInterestArrayAdapter[P<:PointOfInterest](context:Context, resource:Int, objects:ListBuffer[PointOfInterest]) extends ArrayAdapter[PointOfInterest](context, resource, objects) {
+  override def hasStableIds = true
+
+  override def getItemId(pos:Int) = this.getItem(pos).identifier.identifier
+}
+
 class Hermes extends SActivity {
 
+  private lazy val nearestPointsAdapter:PointOfInterestArrayAdapter[PointOfInterest] = new PointOfInterestArrayAdapter(this, android.R.layout.simple_list_item_1, new ListBuffer[PointOfInterest]())
   private lazy val nearestPath = new STextView
 
   private val updateNearestPath = { np:Option[Path] =>
@@ -90,9 +99,9 @@ class Hermes extends SActivity {
   }
 
   private val updateNearestPoints = { points:List[PointOfInterest] =>
-    val adapter = new ArrayAdapter[PointOfInterest](this, android.R.layout.simple_list_item_1, points.toArray)
     runOnUiThread {
-      nearestPoints.setAdapter(adapter)
+      nearestPointsAdapter.clear()
+      nearestPointsAdapter.addAll(points)
     }
   }
 
@@ -111,6 +120,7 @@ class Hermes extends SActivity {
   }
 
   onCreate {
+    nearestPoints.setAdapter(nearestPointsAdapter)
     contentView = new SVerticalLayout {
       style {
         case t:STextView => t.focusable = true

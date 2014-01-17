@@ -374,11 +374,20 @@ trait IntersectionPosition extends RelativePosition {
 
 }
 
+trait Identifier {
+
+  val source:String
+  val identifier:Long
+
+  override def toString(): String = source + "_" + identifier.toString;
+}
+
 trait PointOfInterest extends RelativePosition {
 
   val name:String
 
   val classification:Map[String, String]
+  val identifier:Identifier
 
 }
 
