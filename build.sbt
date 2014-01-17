@@ -26,4 +26,5 @@ aarlib("com.google.android.gms" % "play-services" % "3.1.36"),
 
 proguardOptions += """
   -keep class jsqlite.** { *; }
+  -keep class info.hermesnav.** { *; }
 """
