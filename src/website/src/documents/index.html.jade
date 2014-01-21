@@ -1,0 +1,16 @@
+---
+title: Welcome
+type: page
+order: 0
+isPaged: true
+pagedCollection: "articles"
+pageSize: 5
+---
+
+p Hermes is an accessible, multi-device, multi-paradigm navigation platform for blind or visually-impaired travelers.
+
+h2 News
+
+each a in getPageCollection("articles").toJSON()
+  !=partial("article", {article: a})
+!=partial("paginate")
