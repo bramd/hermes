@@ -27,6 +27,7 @@ class Hermes extends SActivity {
 
   private lazy val nearestPath = new STextView
   private lazy val nearestPointsAdapter:PointOfInterestArrayAdapter[PointOfInterest] = new PointOfInterestArrayAdapter(this, android.R.layout.simple_list_item_1, new ListBuffer[PointOfInterest]())
+  private var pointsLastUpdated:Long = 0
 
   private val updateNearestPath = { np:Option[Path] =>
     runOnUiThread {
@@ -111,8 +112,12 @@ class Hermes extends SActivity {
 
   private val updateNearestPoints = { points:List[PointOfInterest] =>
     runOnUiThread {
-      nearestPointsAdapter.clear()
-      nearestPointsAdapter.addAll(points)
+      val currentTime:Long = System.currentTimeMillis
+      if ((currentTime - pointsLastUpdated) > 2000) {
+        nearestPointsAdapter.clear()
+        nearestPointsAdapter.addAll(points)
+        pointsLastUpdated = currentTime
+      }
     }
   }
 
