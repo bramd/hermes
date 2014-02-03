@@ -5,6 +5,7 @@ import android.app._
 import android.content._
 import android.os._
 import android.preference._
+import android.util.Log
 import android.view._
 import android.widget._
 import org.scaloid.common.{info => _, Preferences => _, SArrayAdapter => _, _}
@@ -24,8 +25,8 @@ class PointOfInterestArrayAdapter[P<:PointOfInterest](context:Context, resource:
 
 class Hermes extends SActivity {
 
-  private lazy val nearestPointsAdapter:PointOfInterestArrayAdapter[PointOfInterest] = new PointOfInterestArrayAdapter(this, android.R.layout.simple_list_item_1, new ListBuffer[PointOfInterest]())
   private lazy val nearestPath = new STextView
+  private lazy val nearestPointsAdapter:PointOfInterestArrayAdapter[PointOfInterest] = new PointOfInterestArrayAdapter(this, android.R.layout.simple_list_item_1, new ListBuffer[PointOfInterest]())
 
   private val updateNearestPath = { np:Option[Path] =>
     runOnUiThread {
@@ -94,8 +95,18 @@ class Hermes extends SActivity {
   }
 
   private lazy val nearestPoints = new SListView {
-    /*onScroll { (l:ListView, firstVisible:Int, visibleCount:Int, totalCount:Int) =>
-    }*/
+
+    adapter = nearestPointsAdapter
+
+    onItemClick { (parent: AdapterView[_], view: View, position: Int, id: Long) =>
+      val item:PointOfInterest = getItemAtPosition(position) match {
+        case i:PointOfInterest => i
+      }
+      val text:String = item.classification.map(c => c._1 + "="  + c._2).mkString("", ", ", "") + " (" + item.identifier.toString + ")"
+      Log.d("hermespoint", text)
+      toast(text)
+    }
+
   }
 
   private val updateNearestPoints = { points:List[PointOfInterest] =>
@@ -120,7 +131,6 @@ class Hermes extends SActivity {
   }
 
   onCreate {
-    nearestPoints.setAdapter(nearestPointsAdapter)
     contentView = new SVerticalLayout {
       style {
         case t:STextView => t.focusable = true
