@@ -1,4 +1,4 @@
-FROM ubuntu:12.10
+FROM ubuntu:13.10
 RUN apt-get update && \
   apt-get upgrade -y && \
   apt-get install -y software-properties-common git && \
@@ -6,12 +6,14 @@ RUN apt-get update && \
   apt-get update && \
   apt-get install -y nodejs && \
   apt-get clean && \
-  adduser --system app --home /srv/app
+  adduser --system app --home /srv/app --shell /bin/sh
 WORKDIR /srv/app
 ENV HOME /srv/app
 ENV NODE_ENV production
 EXPOSE 9778
 ADD . /srv/app
-RUN npm install
+RUN chown -R app $HOME
 USER app
+RUN npm install >/dev/null && \
+  node_modules/bower/bin/bower install
 CMD npm start
