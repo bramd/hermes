@@ -1,18 +1,23 @@
-FROM base
-RUN apt-get update
-RUN apt-get install -y build-essential curl libsqlite3-dev zlib1g-dev libproj-dev libgeos-dev libexpat-dev pkg-config
-RUN curl http://www.gaia-gis.it/gaia-sins/libspatialite-4.1.1.tar.gz >/usr/local/src/libspatialite.tar.gz
-RUN cd /usr/local/src; tar xfz libspatialite.tar.gz
-RUN cd /usr/local/src/libspatialite-4.1.1; ./configure --disable-freexl; make; make install
-RUN curl http://www.gaia-gis.it/gaia-sins/readosm-1.0.0b.tar.gz >/usr/local/src/readosm.tar.gz
-RUN cd /usr/local/src; tar xfz readosm.tar.gz
-RUN cd /usr/local/src/readosm-1.0.0b; ./configure; make; make install
-RUN curl http://www.gaia-gis.it/gaia-sins/spatialite-tools-4.1.1.tar.gz >/usr/local/src/spatialite-tools.tar.gz
-RUN cd /usr/local/src; tar xfz spatialite-tools.tar.gz
-RUN cd /usr/local/src/spatialite-tools-4.1.1; ./configure --disable-freexl; make; make install
-RUN curl http://download.osgeo.org/gdal/CURRENT/gdal-1.10.1.tar.gz >/usr/local/src/gdal.tar.gz
-RUN cd /usr/local/src; tar xfz gdal.tar.gz
-RUN cd /usr/local/src/gdal-1.10.1; ./configure --with-spatialite=yes; make; make install; ldconfig
+FROM ubuntu:13.10
+RUN apt-get update && \
+  apt-get install -y build-essential curl libsqlite3-dev zlib1g-dev libproj-dev libgeos-dev libexpat-dev libfreexl-dev libreadosm-dev pkg-config libpq-dev libmysqlclient-dev && \
+  apt-get clean && \
+  curl http://www.gaia-gis.it/gaia-sins/libspatialite-4.1.1.tar.gz >/usr/local/src/libspatialite.tar.gz && \
+  cd /usr/local/src && \
+  tar xfz libspatialite.tar.gz && \
+  cd libspatialite-4.1.1 && \
+  ./configure  && make && make install && \
+  curl http://www.gaia-gis.it/gaia-sins/spatialite-tools-4.1.1.tar.gz >/usr/local/src/spatialite-tools.tar.gz && \
+  cd /usr/local/src && \
+  tar xfz spatialite-tools.tar.gz && \
+  cd spatialite-tools-4.1.1 && \
+  ./configure && make && make install && \
+  curl http://download.osgeo.org/gdal/CURRENT/gdal-1.10.1.tar.gz >/usr/local/src/gdal.tar.gz && \
+  cd /usr/local/src && \
+  tar xfz gdal.tar.gz && \
+  cd /usr/local/src/gdal-1.10.1 && \
+  ./configure --with-spatialite=yes --with-mysql=/usr/bin/mysql_config && make && make install && ldconfig && \
+  rm /usr/local/src/*gz
 ADD import.sh /usr/bin/import.sh
 ADD spatialite_osm_net.cfg /etc/spatialite_osm_net.cfg
 ADD spatialite_osm_net_water.cfg /etc/spatialite_osm_net_water.cfg
