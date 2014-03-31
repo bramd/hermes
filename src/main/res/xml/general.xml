@@ -30,4 +30,16 @@
     android:defaultValue="true"
     />
 
+  <CheckBoxPreference
+    android:key="activateWhenMoving"
+    android:title="@string/activateWhenMoving"
+    android:defaultValue="true"
+    />>
+
+  <CheckBoxPreference
+    android:key="hideUnnamedPoints"
+    android:title="@string/hideUnnamedPoints"
+    android:defaultValue="false"
+    />
+
 </PreferenceScreen>

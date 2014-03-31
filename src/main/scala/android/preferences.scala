@@ -60,4 +60,7 @@ object Preferences extends SharedPreferences.OnSharedPreferenceChangeListener {
   def activateWhenMoving_? =
     preferences.getBoolean("activateWhenMoving", true)
 
+  def hideUnnamedPoints_? =
+    preferences.getBoolean("hideUnnamedPoints", false)
+
 }

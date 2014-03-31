@@ -21,5 +21,7 @@
   <string name="high">High</string>
   <string name="announceAccuracyChanges">Announce accuracy changes</string>
   <string name="compassMode">Compass mode</string>
+  <string name="activateWhenMoving">Activate when moving</string>
+  <string name="hideUnnamedPoints">Hide unnamed points</string>
 
 </resources>

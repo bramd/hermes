@@ -465,7 +465,7 @@ trait Perspective extends Position {
 
   protected def defaultPointSearchRadius = 2 kilometers
 
-  def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0):List[PointOfInterest]
+  def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0, filter: (PointOfInterest) => Boolean = { p => true }):List[PointOfInterest]
 
   def bearingTo(p:Position) = direction.map(_ & courseTo(p))
 

@@ -276,7 +276,10 @@ class LocationService extends LocalService with LocationListener {
       if(firstRun || ni != lastNearestIntersection)
         NearestIntersectionChanged(ni)
       lastNearestIntersection = ni
-      points = p.nearestPoints()
+      points = p.nearestPoints(filter=Preferences.hideUnnamedPoints_? match {
+        case true => {p => p.name != "Unnamed" }
+        case _ => {p => true}
+      })
       NearestPoints(points)
       previousPerspective = Some(p)
       processing = false

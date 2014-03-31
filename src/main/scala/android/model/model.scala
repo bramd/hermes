@@ -206,12 +206,12 @@ object AndroidIntersectionPosition {
 }
 
 case class AndroidIdentifier(val source:String, val identifier:Long) extends Identifier {
-  
+
 }
 
 case class AndroidPointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double, val identifier:Identifier) extends PointOfInterest with Namer {
 
-  val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).orElse(classification.get("man_made")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
+  val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
 
   override def toString = name+": "+distanceTo(perspective).to(Preferences.measurementSystem)+perspective.bearingTo(this).map(" "+_).getOrElse("")
 
@@ -219,7 +219,8 @@ case class AndroidPointOfInterest(val perspective:Perspective, val classificatio
 
 class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, val direction:Option[Direction], val speed:Speed, val timestamp:Long, var previous:Option[Perspective]) extends Perspective with Classifier with Namer {
 
-  def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0) = {
+  def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0,
+                    filter: (PointOfInterest) => Boolean = { p => true }) = {
     var rv = List[PointOfInterest]()
     maps.map(_.features.exec(
       """select *,
@@ -237,6 +238,10 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
         false
       }
     ))
+    val numResults:Int = rv.length
+    rv = rv.filter(filter)
+    if (rv.length < numResults)
+      rv = rv ++ nearestPoints(searchRadius, limit - numResults, skip + numResults, filter)
     rv.sortBy(distanceTo(_))
   }
 
