@@ -211,7 +211,7 @@ case class AndroidIdentifier(val source:String, val identifier:Long) extends Ide
 
 case class AndroidPointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double, val identifier:Identifier) extends PointOfInterest with Namer {
 
-  val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
+  val name = classification.get("name").orElse(classification.get("ref")).orElse(classification.get("amenity")).orElse(classification.get("shop")).orElse(classification.get("highway")).orElse(classification.get("man_made")).map(humanizeUnderscoredString(_)).getOrElse("Unnamed")
 
   override def toString = name+": "+distanceTo(perspective).to(Preferences.measurementSystem)+perspective.bearingTo(this).map(" "+_).getOrElse("")
 
