@@ -41,6 +41,11 @@ class Event[T] {
     handlers.foreach(_(arg))
     lastArg = Some(arg)
   }
+  
+  def clear {
+    lastArg = None
+    handlers.clear
+  }
 
 }
 

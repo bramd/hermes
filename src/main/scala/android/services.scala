@@ -78,11 +78,15 @@ class LocationService extends LocalService with LocationListener {
 
   onDestroy {
     service = None
-    maps.foreach(_.close())
     setLocationEnabled(false)
     stopForeground(true)
     notificationManager.cancelAll()
+    maps.foreach(_.close())
+    NearestPathChanged.clear
+    NearestPoints.clear
+    NearestIntersectionChanged.clear
     initialized = false
+    stopService
   }
 
   private var locationEnabled = false
