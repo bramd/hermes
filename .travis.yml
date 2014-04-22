@@ -3,10 +3,14 @@ jdk: oraclejdk7
 before_install:
   # Install base Android SDK
     - sudo apt-get update -qq
-    - sudo apt-get install -qq libstdc++6:i386 lib32z1
+    - sudo apt-get install -qq libstdc++6:i386 lib32z1 expect build-essential autoconf automake libtool
     - export COMPONENTS=build-tools-18.1.0,android-18,sysimg-18,extra-android-support
+    - export NDK_HOME=/opt/android-ndk-r9d
     - curl -L https://raw.github.com/embarkmobile/android-sdk-installer/master/android-sdk-installer | bash /dev/stdin --install=$COMPONENTS
     - source ~/.android-sdk-installer/env
+    # Install NDK
+    - curl -L http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2 > ndk.tar.bz2
+    - sudo tar -C /opt -jxf ndk.tar.bz2
     # Create and start emulator
     - echo no | android create avd --force -n test -t android-18 --abi armeabi-v7a
     - emulator -avd test -no-skin -no-audio -no-window &
