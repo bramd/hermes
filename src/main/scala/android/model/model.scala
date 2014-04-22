@@ -241,7 +241,7 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
     val numResults:Int = rv.length
     rv = rv.filter(filter)
     if (rv.length < numResults)
-      rv = rv ++ nearestPoints(searchRadius, limit - numResults, skip + numResults, filter)
+      rv = rv ++ nearestPoints(searchRadius + 10, limit - numResults, skip + numResults, filter)
     rv.sortBy(distanceTo(_))
   }
 
