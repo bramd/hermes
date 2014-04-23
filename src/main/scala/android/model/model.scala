@@ -2,6 +2,7 @@ package info.hermesnav.android
 package model
 
 import collection.SortedSet
+import scala.annotation.tailrec
 
 import android.util.Log
 
@@ -221,28 +222,35 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
 
   def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0,
                     filter: (PointOfInterest) => Boolean = { p => true }) = {
-    var rv = List[PointOfInterest]()
-    maps.map(_.features.exec(
-      """select *,
-      X(Centroid(GEOMETRY)) as lon, Y(Centroid(GEOMETRY)) as lat,
-      Distance(Centroid(GEOMETRY), MakePoint("""+lon+""", """+lat+""")) as distance
-      from points
-      where rowid in (
-        select rowid from SpatialIndex
-        where f_table_name = 'points'
-        and f_geometry_column = 'GEOMETRY'
-        and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
-      order by distance limit """+limit,
-      { row:Map[String, String] =>
-        rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble, AndroidIdentifier("osm", row("osm_id").toLong))
-        false
-      }
-    ))
-    val numResults:Int = rv.length
-    rv = rv.filter(filter)
-    if (rv.length < numResults)
-      rv = rv ++ nearestPoints(searchRadius + 10, limit - numResults, skip + numResults, filter)
-    rv.sortBy(distanceTo(_))
+    @tailrec
+    def calculateNearestPoints(initialPoints:List[PointOfInterest], searchRadius:Distance = searchRadius, limit:Int = limit, skip:Int = skip, recLevel:Int = 0, maxRecLevel:Int = 5):List[PointOfInterest] = {
+      if (recLevel == maxRecLevel)
+        return initialPoints
+      var rv = List[PointOfInterest]() ::: initialPoints
+      maps.map(_.features.exec(
+        """select *,
+        X(Centroid(GEOMETRY)) as lon, Y(Centroid(GEOMETRY)) as lat,
+        Distance(Centroid(GEOMETRY), MakePoint("""+lon+""", """+lat+""")) as distance
+        from points
+        where rowid in (
+          select rowid from SpatialIndex
+          where f_table_name = 'points'
+          and f_geometry_column = 'GEOMETRY'
+          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
+        order by distance limit """+limit,
+        { row:Map[String, String] =>
+          rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble, AndroidIdentifier("osm", row("osm_id").toLong))
+          false
+        }
+      ))
+      val numResults:Int = rv.length
+      rv = rv.filter(filter)
+      if (rv.length == numResults)
+        rv
+      else
+        calculateNearestPoints(rv, searchRadius + 10, limit - numResults, skip + numResults, recLevel + 1)
+    }
+    calculateNearestPoints(List[PointOfInterest]())
   }
 
   val nearestIntersectionCandidates = {
