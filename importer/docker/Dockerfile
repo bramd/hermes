@@ -1,4 +1,5 @@
-FROM ubuntu:13.10
+FROM ubuntu:14.04
+ENV GDAL_VERSION 1.11.0
 RUN apt-get update && \
   apt-get install -y build-essential curl libsqlite3-dev zlib1g-dev libproj-dev libgeos-dev libexpat-dev libfreexl-dev libreadosm-dev pkg-config libpq-dev libmysqlclient-dev && \
   apt-get clean && \
@@ -12,10 +13,10 @@ RUN apt-get update && \
   tar xfz spatialite-tools.tar.gz && \
   cd spatialite-tools-4.1.1 && \
   ./configure && make && make install && \
-  curl http://download.osgeo.org/gdal/CURRENT/gdal-1.10.1.tar.gz >/usr/local/src/gdal.tar.gz && \
+  curl http://download.osgeo.org/gdal/CURRENT/gdal-$GDAL_VERSION.tar.gz >/usr/local/src/gdal.tar.gz && \
   cd /usr/local/src && \
   tar xfz gdal.tar.gz && \
-  cd /usr/local/src/gdal-1.10.1 && \
+  cd /usr/local/src/gdal-$GDAL_VERSION && \
   ./configure --with-spatialite=yes --with-mysql=/usr/bin/mysql_config && make && make install && ldconfig && \
   rm /usr/local/src/*gz
 ADD import.sh /usr/bin/import.sh
