@@ -21,10 +21,14 @@ platformName := "android-18"
 libraryDependencies := Seq(
 aarlib("com.google.android.gms" % "play-services" % "3.1.36"),
   "org.scaloid" %% "scaloid" % "2.3-8",
-  "ch.acra" % "acra" % "4.5.0"
+  "ch.acra" % "acra" % "4.5.0",
+  "com.graphhopper" % "graphhopper" % "0.3",
+  "org.mapsforge" % "mapsforge-map-reader" % "0.4.3"
 )
 
 proguardOptions += """
   -keep class jsqlite.** { *; }
   -keep class info.hermesnav.** { *; }
+  -keep class com.graphhopper.** { *; }
+  -keep class org.mapsforge.** { *; }
 """

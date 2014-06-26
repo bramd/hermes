@@ -16,6 +16,7 @@ import android.util.Log
 import android.widget._
 import jsqlite._
 import org.scaloid.common.{info => _, Preferences => _, _}
+import org.mapsforge.map.reader.MapDatabase
 
 import info.hermesnav.core._
 import events._
@@ -40,13 +41,12 @@ class LocationService extends LocalService with LocationListener {
   private def loadMap() {
     val dir = getExternalFilesDir(null)
     dir.mkdir()
-    val features = new Database()
+    val features = new MapDatabase()
     val graph = new Database()
     try {
-      val featuresFile = new File(dir, "features.db")
-      if(!featuresFile.exists)
-        featuresFile.createNewFile()
-      features.open(featuresFile.toString, Constants.SQLITE_OPEN_READONLY)
+      val featuresFile = new File(dir, "features.map")
+      features.openFile(featuresFile)
+      Log.d("hermes", "Opened features map " + features.hasOpenFile.toString)
       val graphFile = new File(dir, "graph.db")
       if(!graphFile.exists)
         graphFile.createNewFile()
@@ -70,6 +70,7 @@ class LocationService extends LocalService with LocationListener {
     setLocationEnabled(true)
     startForeground(1, getNotification(getString(R.string.app_name)))
     initialized = true
+    Log.d("hermes", "LocationService initialized")
     queuedMessages.reverse.foreach { i =>
       sendMessage(i._1, i._2)
     }
@@ -87,6 +88,7 @@ class LocationService extends LocalService with LocationListener {
     NearestIntersectionChanged.clear
     initialized = false
     stopService
+    Log.d("hermes", "LocationService stopped")
   }
 
   private var locationEnabled = false
@@ -194,6 +196,7 @@ class LocationService extends LocalService with LocationListener {
   private var points = List[PointOfInterest]()
 
   NearestIntersectionChanged += { intersection:Option[IntersectionPosition] =>
+    Log.d("hermes", "NearestIntersectionChanged")
     pingedIntersections = pingedIntersections.filter(System.currentTimeMillis-_._2 <= 120000)
     intersection.foreach { i =>
       pingedIntersections.get(i).getOrElse {
@@ -260,26 +263,35 @@ class LocationService extends LocalService with LocationListener {
       ProviderChanged(provider)
     lastProvider = provider
     if(processing) {
+//      Log.d("hermes", "Still processing...")
       unprocessedLocation = Some(loc)
       return
     }
     processing = true
-    future {
-      Option(Looper.myLooper).getOrElse(Looper.prepare())
+    Future {
+      Log.d("hermes", "The future is here!")
+//      Option(Looper.myLooper).getOrElse(Looper.prepare())
+      Log.d("hermes", "newPerspective")
       val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+      Log.d("hermes", "PerspectiveChanged")
       PerspectiveChanged(p)
       val np = p.nearestPath
-      if(firstRun || np != lastNearestPath)
+      if(firstRun || np != lastNearestPath) {
+        Log.d("hermes", "NearestPathChanged")
         NearestPathChanged(np)
+      }
       lastNearestPath = np
       val ni = p.nearestIntersection
-      if(firstRun || ni != lastNearestIntersection)
+      if(firstRun || ni != lastNearestIntersection) {
+        Log.d("hermes", "IntersectionChanged")
         NearestIntersectionChanged(ni)
+      }
       lastNearestIntersection = ni
       points = p.nearestPoints(filter=Preferences.hideUnnamedPoints_? match {
         case true => {p => p.name != "Unnamed" }
         case _ => {p => true}
       })
+      Log.d("hermes", "NearestPoints")
       NearestPoints(points)
       previousPerspective = Some(p)
       processing = false

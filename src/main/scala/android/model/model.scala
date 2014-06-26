@@ -2,11 +2,17 @@ package info.hermesnav.android
 package model
 
 import collection.SortedSet
-import scala.annotation.tailrec
+import collection.JavaConversions._
 
 import android.util.Log
 
 import jsqlite._
+
+import com.graphhopper.GraphHopper
+
+import org.mapsforge.map.reader.MapDatabase
+import org.mapsforge.core.util.MercatorProjection
+import org.mapsforge.core.model.Tile
 
 import info.hermesnav.core._
 import preferences._
@@ -33,9 +39,8 @@ private[model] class CB(cb:Map[String, String] => Boolean) extends Callback {
 
 }
 
-case class AndroidMap(val features:Database, val graph:Database) {
+case class AndroidMap(val features:MapDatabase, val graph:Database) {
   def close() {
-    features.close()
     graph.close()
   }
 }
@@ -43,28 +48,11 @@ case class AndroidMap(val features:Database, val graph:Database) {
 case class AndroidPath(map:AndroidMap, ids:SortedSet[Int], val name:Option[String], val classification:Map[String, String], geom:String) extends Path with Namer {
 
   private[model] def joinWith(other:AndroidPath) = {
-    var rv:AndroidPath = null
-    map.features.exec(
-      "select asWKT(gUnion(geomFromText('"+geom+"'), geomFromText('"+other.geom+"'))) as geom",
-      { row:Map[String, String] =>
-        rv = copy(ids = (other.ids++ids), classification = classification++other.classification, geom = row("geom"))
-        false
-      }
-    )
-    rv
+    None
   }
 
   def crosses_?(other:Position) = {
-    var rv = false
-    map.features.exec(
-      "select Crosses(geomFromText('"+geom+"'), ST_Buffer(MakePoint("+other.lon+", "+other.lat+"), 0.0001)) as crosses",
-      { row:Map[String, String] =>
-        if(row("crosses").toInt == 1)
-          rv = true
-        false
-      }
-    )
-    rv
+    false
   }
 
   override val toString =
@@ -107,13 +95,6 @@ trait Classifier {
 object AndroidPath extends Classifier {
   def apply(map:AndroidMap, id:Int):Option[AndroidPath] = {
     var rv:Option[AndroidPath] = None
-    map.features.exec(
-      "select name, asWKT(GEOMETRY) as geom, * from lines where osm_id = "+id+" limit 1",
-      { row:Map[String, String] =>
-        rv = Some(new AndroidPath(map, SortedSet(id), row.get("name"), classify(row), row("geom")))
-        false
-      }
-    )
     rv
   }
 }
@@ -132,7 +113,7 @@ class AndroidIntersectionPosition(private val map:AndroidMap, private val id:Int
           v.name != None && v.name == path.name
         }.headOption.map { same =>
           rv = rv.filterNot(_ == same)
-          rv ::= same.joinWith(path)
+//          rv ::= same.joinWith(path)
         }.getOrElse {
           rv ::= path
         }
@@ -222,89 +203,46 @@ class AndroidPerspective(maps:List[AndroidMap], val lat:Double, val lon:Double, 
 
   def nearestPoints(searchRadius:Distance = defaultPointSearchRadius, limit:Int = 10, skip:Int = 0,
                     filter: (PointOfInterest) => Boolean = { p => true }) = {
-    @tailrec
-    def calculateNearestPoints(initialPoints:List[PointOfInterest], searchRadius:Distance = searchRadius, limit:Int = limit, skip:Int = skip, recLevel:Int = 0, maxRecLevel:Int = 5):List[PointOfInterest] = {
-      if (recLevel == maxRecLevel)
-        return initialPoints
-      var rv = List[PointOfInterest]() ::: initialPoints
-      maps.map(_.features.exec(
-        """select *,
-        X(Centroid(GEOMETRY)) as lon, Y(Centroid(GEOMETRY)) as lat,
-        Distance(Centroid(GEOMETRY), MakePoint("""+lon+""", """+lat+""")) as distance
-        from points
-        where rowid in (
-          select rowid from SpatialIndex
-          where f_table_name = 'points'
-          and f_geometry_column = 'GEOMETRY'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+searchRadius.toDegreesAt(lat)+"""))
-        order by distance limit """+limit,
-        { row:Map[String, String] =>
-          rv ::= AndroidPointOfInterest(this, classify(row), row("lat").toDouble, row("lon").toDouble, AndroidIdentifier("osm", row("osm_id").toLong))
-          false
-        }
-      ))
-      val numResults:Int = rv.length
-      rv = rv.filter(filter)
-      if (rv.length == numResults)
-        rv
-      else
-        calculateNearestPoints(rv, searchRadius + 10, limit - numResults, skip + numResults, recLevel + 1)
-    }
-    calculateNearestPoints(List[PointOfInterest]())
+    val zoomLevel:Byte = 18
+    val tile = new Tile(MercatorProjection.longitudeToTileX(lon, zoomLevel),
+                         MercatorProjection.latitudeToTileY(lat, zoomLevel), zoomLevel)
+    maps.flatMap(_.features.readMapData(tile).pointOfInterests.map(p =>
+      new AndroidPointOfInterest(this, p.tags.map({ t => (t.key, t.value) }).toMap,
+                                 p.position.latitude, p.position.longitude,
+                                 new AndroidIdentifier("osm", p.hashCode))
+    )).filter(filter).sortBy(distanceTo(_))
   }
 
+  Log.d("hermes", "nearestIntersectionCandidates")
   val nearestIntersectionCandidates = {
     var rv = List[IntersectionPosition]()
-    maps.map { m =>
-      m.graph.exec(
-        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
-        X(geometry) as lon,
-        Y(geometry) as lat, node_id as id
-        from paths_nodes
-        where paths_nodes.rowid in (
-          select rowid from SpatialIndex
-          where f_table_name = 'paths_nodes'
-          and f_geometry_column = 'geometry'
-          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestIntersectionDistance.toDegreesAt(lat)+""")
-        ) order by distance""",
-        { row:Map[String, String] =>
-          rv ::= new AndroidIntersectionPosition(m, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
-          false
-        }
-      )
-    }
+//    maps.map { m =>
+//      m.graph.exec(
+//        """select Distance(geometry, MakePoint("""+lon+""", """+lat+""")) as distance,
+//        X(geometry) as lon,
+//        Y(geometry) as lat, node_id as id
+//        from paths_nodes
+//        where paths_nodes.rowid in (
+//          select rowid from SpatialIndex
+//          where f_table_name = 'paths_nodes'
+//          and f_geometry_column = 'geometry'
+//          and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+nearestIntersectionDistance.toDegreesAt(lat)+""")
+//        ) order by distance""",
+//        { row:Map[String, String] =>
+//          rv ::= new AndroidIntersectionPosition(m, row("id").toInt, this, row("lat").toDouble, row("lon").toDouble)
+//          false
+//        }
+//      )
+//    }
     rv.sortBy(distanceTo(_))
   }
 
+  Log.d("hermes", "nearestPathBegin")
   val nearestPath:Option[Path] = {
-    calcNearestPath.orElse {
-      val distance = nearestPathThreshold.toDegreesAt(lat)
-      var paths:List[AndroidPath] = Nil
-      maps.map { m =>
-        m.features.exec(
-          """select osm_id, Distance(GEOMETRY, MakePoint("""+lon+""", """+lat+""")) as distance, name, asWKT(GEOMETRY) as geom, *
-          from lines
-          where lines.rowid in (
-            select rowid from SpatialIndex
-            where f_table_name = 'lines'
-            and f_geometry_column = 'GEOMETRY'
-            and search_frame = BuildCircleMBR("""+lon+""", """+lat+""", """+distance+""")
-          ) and distance <= """+distance+""" order by distance limit 1""",
-          { row:Map[String, String] =>
-            paths ::= AndroidPath(m, SortedSet(row("osm_id").toInt), row.get("name"), classify(row), row("geom"))
-            false
-          }
-        )
-      }
-      (for(
-        p <- previous;
-        pnp <- p.nearestPath;
-        pnp2 = pnp if(paths.contains(pnp))
-      ) yield(pnp2))
-      .orElse(paths.reverse.headOption)
-    }
+    calcNearestPath.orElse(None)
   }
 
+  Log.d("hermes", "finishing")
   finish()
 
 }
