@@ -9,7 +9,6 @@ import android.util.Log
 
 import info.hermesnav.core._
 import events._
-import model._
 import preferences._
 
 object Sensors extends SensorEventListener {
