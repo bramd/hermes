@@ -332,17 +332,17 @@ trait Path {
 
 trait IntersectionPosition extends RelativePosition {
 
-  val paths:List[Path]
+  val paths:Set[Path]
 
-  def pathsExcept(path:Path):List[Path]
+  def pathsExcept(path:Path):Set[Path] = paths.filterNot(_ == path)
 
-  def includes_?(path:Path):Boolean
+  def includes_?(path:Path):Boolean = paths.contains(path)
 
-  val neighbors:List[IntersectionPosition]
+  val neighbors:Set[Position]
 
   lazy val name = {
 
-    def countWays = neighbors.length match {
+    def countWays = neighbors.size match {
       case 1 => "Dead end"
       case v => v+"-way intersection"
     }
@@ -350,21 +350,21 @@ trait IntersectionPosition extends RelativePosition {
     val myPaths =
       perspective.nearestPath.map { np =>
         if(includes_?(np))
-          np :: pathsExcept(np)
+          pathsExcept(np)+np
         else paths
-      }.getOrElse(paths)
+      }.getOrElse(paths).toSet
 
     val pathsToSentence = paths.size match {
       case 2 =>
         val first = myPaths.head
-        val second = myPaths.reverse.head
+        val second = myPaths.last
         Log.d("hermescheck40", "Cross check: "+paths.mkString(", "))
         first.toString+" "+(if(first.crosses_?(this))
           "crossing"
         else
           "and"
         )+" "+second
-      case _ => toSentence(myPaths.map(_.toString))
+      case _ => toSentence(myPaths.map(_.toString).toList)
     }
 
     countWays+": "+pathsToSentence
@@ -443,14 +443,14 @@ trait Perspective extends Position {
   else
     40 meters
 
-  protected val nearestIntersectionCandidates:List[IntersectionPosition]
+  protected val nearestIntersectionCandidates:Set[IntersectionPosition]
 
   lazy val nearestIntersection:Option[IntersectionPosition] = {
     val candidates = nearestPath.map { np =>
       nearestIntersectionCandidates.filter(_.includes_?(np))
     }.getOrElse(nearestIntersectionCandidates)
     .filter(distanceTo(_) <= nearestIntersectionDistance)
-    .sortBy(distanceTo(_))
+    .toList.sortBy(distanceTo(_))
     previous.flatMap(_.nearestIntersection).find { ni =>
       distanceTo(ni) <= (20 meters)
     }.orElse {

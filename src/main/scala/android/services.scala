@@ -14,13 +14,12 @@ import android.os._
 import android.provider._
 import android.util.Log
 import android.widget._
-import jsqlite._
 import org.scaloid.common.{info => _, Preferences => _, _}
 import org.mapsforge.map.reader.MapDatabase
 
 import info.hermesnav.core._
+import info.hermesnav.mapsforge.MapsforgePerspective
 import events._
-import model.{AndroidMap, AndroidPerspective}
 import preferences._
 
 class LocationService extends LocalService with LocationListener {
@@ -36,22 +35,17 @@ class LocationService extends LocalService with LocationListener {
 
   private lazy val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
 
-  private var maps = List[AndroidMap]()
+  private var maps = List[MapDatabase]()
 
   private def loadMap() {
     val dir = getExternalFilesDir(null)
     dir.mkdir()
     val features = new MapDatabase()
-    val graph = new Database()
     try {
       val featuresFile = new File(dir, "features.map")
       features.openFile(featuresFile)
-      Log.d("hermes", "Opened features map " + features.hasOpenFile.toString)
-      val graphFile = new File(dir, "graph.db")
-      if(!graphFile.exists)
-        graphFile.createNewFile()
-      graph.open(graphFile.toString, Constants.SQLITE_OPEN_READONLY)
-      maps = List(AndroidMap(features, graph))
+      Log.d("hermes", "Opened features map " + dir)
+      maps = List(features)
     } catch {
       case e:Throwable =>
         Log.d("hermes", "Error opening map", e)
@@ -82,7 +76,6 @@ class LocationService extends LocalService with LocationListener {
     setLocationEnabled(false)
     stopForeground(true)
     notificationManager.cancelAll()
-    maps.foreach(_.close())
     NearestPathChanged.clear
     NearestPoints.clear
     NearestIntersectionChanged.clear
@@ -170,16 +163,9 @@ class LocationService extends LocalService with LocationListener {
 
   NearestPathChanged += { path:Option[Path] =>
     path.map { p =>
-      lazy val msg = getString(R.string.nearestPath, p.toString)
-      if(lastNearestPath == None || p.name == None)
-        sendMessage(msg, true)
-      else {
-        lastNearestPath.foreach { l =>
-          if(l.name != p.name)
-            sendMessage(msg, true)
-        }
-        true
-      }
+      val msg = getString(R.string.nearestPath, p.toString)
+      sendMessage(msg, true)
+      true
     }.getOrElse {
       try {
         sendMessage(getString(R.string.offRoad), true)
@@ -205,7 +191,7 @@ class LocationService extends LocalService with LocationListener {
           val paths = perspective.nearestPath.map { np =>
             i.pathsExcept(np)
           }.getOrElse(i.paths)
-          toSentence(paths.map(_.toString))
+          toSentence(paths.toList.map(_.toString))
         } else
           i.name
         sendMessage(msg)
@@ -269,14 +255,14 @@ class LocationService extends LocalService with LocationListener {
     }
     processing = true
     Future {
-      Log.d("hermes", "The future is here!")
-//      Option(Looper.myLooper).getOrElse(Looper.prepare())
       Log.d("hermes", "newPerspective")
-      val p = new AndroidPerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
+      val p = new MapsforgePerspective(maps, loc.getLatitude, loc.getLongitude, dir, (loc.getSpeed meters) per second, loc.getTime, previousPerspective)
       Log.d("hermes", "PerspectiveChanged")
       PerspectiveChanged(p)
       val np = p.nearestPath
+      Log.d("hermescheck", "np: "+np.map(_.classification)+", last: "+lastNearestPath.map(_.classification))
       if(firstRun || np != lastNearestPath) {
+        Log.d("hermescheck", "Updating nearest path")
         Log.d("hermes", "NearestPathChanged")
         NearestPathChanged(np)
       }
@@ -291,7 +277,6 @@ class LocationService extends LocalService with LocationListener {
         case true => {p => p.name != "Unnamed" }
         case _ => {p => true}
       })
-      Log.d("hermes", "NearestPoints")
       NearestPoints(points)
       previousPerspective = Some(p)
       processing = false
@@ -374,11 +359,8 @@ class ActivityDetector extends IntentService("ActivityDetector") {
       val t = activity.getType
       t match {
         case STILL =>
-          Log.d("hermescheck", "Still: "+stoppedAt)
           stoppedAt.map { s =>
-            Log.d("hermescheck", "Here: "+stoppedAt)
             if(Preferences.activateWhenMoving_? && !LocationService.activelyViewing && System.currentTimeMillis-s >= 180000) {
-              Log.d("hermescheck", "Here2")
               stopService(new Intent(this, classOf[LocationService]))
               stoppedAt = None
               startedAt = None
@@ -386,7 +368,6 @@ class ActivityDetector extends IntentService("ActivityDetector") {
           }.getOrElse {
             stoppedAt = Some(System.currentTimeMillis)
             startedAt = None
-            Log.d("hermescheck", "Here2: "+stoppedAt)
           }
         case TILTING | UNKNOWN =>
         case _ =>
