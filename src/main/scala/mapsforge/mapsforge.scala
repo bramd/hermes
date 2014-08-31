@@ -36,7 +36,7 @@ trait Classifier {
   }
 }
 
-case class MapsforgeIdentifier(val source:String, val identifier:Long) extends Identifier 
+case class MapsforgeIdentifier(val source:String, val identifier:Long) extends Identifier
 
 case class MapsforgePointOfInterest(val perspective:Perspective, val classification:Map[String, String], val lat:Double, val lon:Double, val identifier:Identifier) extends PointOfInterest with Namer {
 
@@ -122,7 +122,7 @@ class MapsforgePerspective(maps:List[MapDatabase], val lat:Double, val lon:Doubl
     var latLongToWays = collection.mutable.Map[LatLong, collection.mutable.Set[Way]]()
     val ways = maps.flatMap(_.readMapData(tile).ways)
     maps.foreach(_.readMapData(tile).ways.map { w =>
-      w.latLongs.flatten.foreach { ll => 
+      w.latLongs.flatten.foreach { ll =>
         latLongToWays.get(ll).map { x =>
           latLongToWays(ll) += w
         }.getOrElse(latLongToWays(ll) = collection.mutable.Set(w))
@@ -135,7 +135,12 @@ class MapsforgePerspective(maps:List[MapDatabase], val lat:Double, val lon:Doubl
 
   val nearestPath:Option[Path] = {
     calcNearestPath.orElse {
-      val wayPoints = maps.flatMap(_.readMapData(tile).ways.map { way =>
+      val wayPoints = maps.flatMap(_.readMapData(tile).ways
+        .filter { way =>
+          val tag_keys = way.tags.map(t => t.key)
+          !tag_keys.contains("building") || !tag_keys.contains()
+        }
+        .map { way =>
         (way, way.latLongs.toList.flatten)
       })
       def toSegments(points:List[LatLong]):List[Tuple2[LatLong, LatLong]] = points match {
@@ -143,7 +148,7 @@ class MapsforgePerspective(maps:List[MapDatabase], val lat:Double, val lon:Doubl
         case hd :: Nil => Nil
         case fst :: snd :: rest => (fst, snd) :: toSegments(rest)
       }
-      wayPoints.map(v => (v._1, toSegments(v._2)))
+      val result = wayPoints.map(v => (v._1, toSegments(v._2)))
       .map { v =>
         def distanceTo(seg:Tuple2[LatLong, LatLong]) = {
           val rNum = (lat-seg._1.latitude)*(seg._2.latitude-seg._1.latitude)+(lon-seg._1.longitude)*(seg._2.longitude-seg._1.longitude)
@@ -157,6 +162,8 @@ class MapsforgePerspective(maps:List[MapDatabase], val lat:Double, val lon:Doubl
         (v._1, v._2.map(distanceTo(_)).min)
       }.sortWith((v1:Tuple2[Way, Double], v2:Tuple2[Way, Double]) => v1._2 < v2._2)
       .headOption.map(v => MapsforgePath(v._1))
+    Log.d("hermesway", result.get.classification.mkString(","))
+    result
     }
   }
 
